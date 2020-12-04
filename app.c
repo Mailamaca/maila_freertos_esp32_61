@@ -113,7 +113,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mailamsg.int_data.data[4] = 0;
 
 
-	updateIMU(TimePast);
+	//updateIMU(TimePast);
 
 	// prepare mailamsg.float_data
 	mailamsg.float_data.data = (float *)calloc(IMU_N_DATA, sizeof(float));
@@ -170,6 +170,7 @@ void appMain(void * arg)
 		RCL_MS_TO_NS(publisher_timer_timeout),
 		publisher_timer_callback));
 
+	/*
 	// create imu_timer
 	rcl_timer_t imu_timer;
 	const unsigned int imu_timer_timeout = 500;
@@ -178,6 +179,7 @@ void appMain(void * arg)
 		&support,
 		RCL_MS_TO_NS(imu_timer_timeout),
 		imu_timer_callback));
+	*/
 
 	// config pcnt
 	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
@@ -189,15 +191,15 @@ void appMain(void * arg)
 	rclc_executor_t executor;
 	RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
 	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
-	RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
+	//RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
 
-	//while(1){
-	//	rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
-	//	//usleep(100000);
-	//}
+	while(1){
+		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+		//usleep(100000);
+	}
 
 	// spin forever
-	rclc_executor_spin(&executor);
+	//rclc_executor_spin(&executor);
 
 	// free resources
 	RCCHECK(rcl_publisher_fini(&publisher, &node))
