@@ -30,6 +30,8 @@ maila_msgs__msg__Esp32Data mailamsg;
 
 #define ENCODERS 5
 int16_t prev_ticks[ENCODERS] = {};
+int16_t delta_ticks[ENCODERS] = {};
+int16_t ticks;
 
 
 
@@ -82,17 +84,14 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	}
 	
 	// fill mailamsg.stamp
-	mailamsg.stamp.sec = last_call_time / 1000000;
-	mailamsg.stamp.nanosec = last_call_time - mailamsg.stamp.sec;
-
-	// calc encoders
-	int16_t delta_ticks[ENCODERS] = {};
-	int16_t value;
+	int64_t delta_sec = last_call_time / 1000000;
+	mailamsg.stamp.sec = delta_sec;
+	mailamsg.stamp.nanosec = last_call_time - delta_sec;
 
 	// enc 0
-	pcnt_get_counter_value(PCNT_UNIT_0, &value);
-	delta_ticks[0] = getPCNTDelta(prev_ticks[0], value);
-	prev_ticks[0] = value;
+	pcnt_get_counter_value(PCNT_UNIT_0, &ticks);
+	delta_ticks[0] = getPCNTDelta(prev_ticks[0], ticks);
+	prev_ticks[0] = ticks;
 
 	delta_ticks[1] = 0;
 	delta_ticks[2] = 0;
