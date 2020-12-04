@@ -5,6 +5,7 @@
 #include "freertos/timers.h"
 #include "freertos/event_groups.h"
 #include "sdkconfig.h"
+#include <math.h>
 
 
 ////////////////////////////////////////////////
@@ -22,7 +23,7 @@ float magScaleX, magScaleY, magScaleZ;
 #define Ki 1.7f
 uint8_t txData[2] = { };
 uint8_t rxData[21] = { };
-/
+
 
 void setupIMU(int pinCLK,
               int pinMISO,

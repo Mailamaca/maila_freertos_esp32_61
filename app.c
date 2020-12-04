@@ -116,7 +116,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	updateIMU(TimePast);
 
 	// prepare mailamsg.float_data
-	mailamsg.float_data.data = (float32_t *)calloc(IMU_N_DATA, sizeof(float32_t));
+	mailamsg.float_data.data = (float *)calloc(IMU_N_DATA, sizeof(float));
 	mailamsg.float_data.capacity = IMU_N_DATA;
 	mailamsg.float_data.size = IMU_N_DATA;
 

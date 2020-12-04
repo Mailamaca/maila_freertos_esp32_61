@@ -140,7 +140,7 @@ void setupIMU(int pinCLK,
   dev_config.address_bits     = 0;
   dev_config.command_bits     = 0;
   dev_config.dummy_bits       = 0;
-  dev_config.mode             = SPI_MODE3 ;
+  dev_config.mode             = 3 ;
   dev_config.duty_cycle_pos   = 0;
   dev_config.cs_ena_posttrans = 0;
   dev_config.cs_ena_pretrans  = 0;
@@ -377,7 +377,7 @@ void fReadMPU9250 ( uint8_t byteReadSize, uint8_t addressToRead )
 {
   esp_err_t intError;
   spi_transaction_t trans_desc;
-  trans_desc = { };
+  //trans_desc = { };
   trans_desc.addr =  0;
   trans_desc.cmd = 0;
   trans_desc.flags = 0;
@@ -400,7 +400,7 @@ void fWriteSPIdata8bits( uint8_t address, uint8_t DataToSend)
 {
   esp_err_t intError;
   spi_transaction_t trans_desc;
-  trans_desc = { };
+  //trans_desc = { };
   trans_desc.addr = 0;
   trans_desc.cmd = 0;
   trans_desc.flags  = 0;
