@@ -185,7 +185,7 @@ void appMain(void * arg)
 	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
 
 	// config imu mpu9250
-	setupIMU(18,19,23,5);
+	//setupIMU(18,19,23,5);
 	
 	// create executor
 	rclc_executor_t executor;
