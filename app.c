@@ -12,6 +12,11 @@
 #ifdef ESP_PLATFORM
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_types.h"
+#include "driver/periph_ctrl.h"
+#include "driver/timer.h"
+#include "driver/gpio.h"
+#include "driver/pcnt.h"
 #endif
 
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Aborting.\n",__LINE__,(int)temp_rc);vTaskDelete(NULL);}}
@@ -22,13 +27,76 @@ rcl_publisher_t publisher;
 
 maila_msgs__msg__Esp32Data mailamsg;
 
+int16_t prev_ticks[5] = {};
+
+void setPCNTParams(int pinPulse,
+                 int pinCtrl,
+                 pcnt_channel_t channel,
+                 pcnt_unit_t unit,
+                 uint16_t filter) {
+
+	pcnt_config_t pcnt_config;
+      	pcnt_config.pulse_gpio_num = pinPulse;
+      	pcnt_config.ctrl_gpio_num = pinCtrl;
+      	pcnt_config.channel = channel;
+      	pcnt_config.unit = unit;
+	pcnt_config.pos_mode = PCNT_COUNT_INC;
+	pcnt_config.neg_mode = PCNT_COUNT_DIS;
+	pcnt_config.lctrl_mode = PCNT_MODE_KEEP;
+	pcnt_config.hctrl_mode = PCNT_MODE_KEEP;
+	pcnt_config.counter_h_lim = INT16_MAX;
+	pcnt_config.counter_l_lim = 0;
+	pcnt_unit_config(&pcnt_config);
+	
+	pcnt_set_filter_value(unit, filter);
+	pcnt_filter_enable(unit);
+
+	gpio_pulldown_en(pinPulse);
+	gpio_pulldown_en(pinCtrl);
+	
+	pcnt_counter_pause(unit);
+	pcnt_counter_clear(unit);
+	pcnt_counter_resume(unit);
+
+}
+
+int16_t getPCNTDelta(int16_t prev_value, int16_t new_value) {
+	int16_t prev_value = value;
+	int16_t new_value;
+	
+	if (newValue >= prevValue) {
+		return (newValue - prevValue);
+	} else {
+		return (INT16_MAX - prevValue + newValue);
+	}
+}
+
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 {
-	RCLC_UNUSED(last_call_time);
-	if (timer != NULL) {
-		RCSOFTCHECK(rcl_publish(&publisher, &mailamsg, NULL));
-		mailamsg.stamp.sec++;
+
+	//RCLC_UNUSED(last_call_time);
+	if (timer == NULL) {
+		return;
 	}
+	
+	mailamsg.stamp.sec = last_call_time / 1000;
+	mailamsg.stamp.nanosec = last_call_time - mailamsg.stamp.sec;
+
+	int16_t delta_ticks[5] = {};
+	int16_t value;
+
+	pcnt_get_counter_value(PCNT_UNIT_0, &value);
+	delta_ticks[0] = getPCNTDelta(prev_ticks[0], value);
+	prev_ticks[0] = value;
+
+	delta_ticks[1] = 1;
+	delta_ticks[2] = 1;
+	delta_ticks[3] = 1;
+	delta_ticks[4] = 1;
+	mailamsg.int_data = delta_ticks;
+
+
+	RCSOFTCHECK(rcl_publish(&publisher, &mailamsg, NULL));
 }
 
 void appMain(void * arg)
@@ -59,6 +127,9 @@ void appMain(void * arg)
 		RCL_MS_TO_NS(timer_timeout),
 		timer_callback));
 
+	// config pcnt
+	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1) // encoder 0
+
 	// create executor
 	rclc_executor_t executor;
 	RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
@@ -69,7 +140,7 @@ void appMain(void * arg)
 
 	while(1){
 		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
-		usleep(100000);
+		//usleep(100000);
 	}
 
 	// free resources
