@@ -91,8 +91,9 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	}
 	
 	// fill mailamsg.stamp
-	mailamsg.stamp.sec = last_call_time / (1000*1000);
-	mailamsg.stamp.nanosec = last_call_time - (mailamsg.stamp.sec*(1000*1000));
+	int64_t ssec = last_call_time / (1000*1000*1000);
+	mailamsg.stamp.sec = ssec;
+	mailamsg.stamp.nanosec = last_call_time - ssec;
 
 	// prepare mailamsg.int_data
 	mailamsg.int_data.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
