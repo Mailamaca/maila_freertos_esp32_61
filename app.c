@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <vector> 
 
 #include <rcl/rcl.h>
 #include <rcl/error_handling.h>
@@ -61,8 +62,6 @@ void setPCNTParams(int pinPulse,
 }
 
 int16_t getPCNTDelta(int16_t prev_value, int16_t new_value) {
-	int16_t prev_value = value;
-	int16_t new_value;
 	
 	if (newValue >= prevValue) {
 		return (newValue - prevValue);
@@ -82,17 +81,14 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mailamsg.stamp.sec = last_call_time / 1000;
 	mailamsg.stamp.nanosec = last_call_time - mailamsg.stamp.sec;
 
-	int16_t delta_ticks[5] = {};
+	//int16_t delta_ticks[5] = {};
+	std::vector<int16_t> delta_ticks; 
 	int16_t value;
 
 	pcnt_get_counter_value(PCNT_UNIT_0, &value);
-	delta_ticks[0] = getPCNTDelta(prev_ticks[0], value);
+	delta_ticks.push_back(getPCNTDelta(prev_ticks[0], value));
 	prev_ticks[0] = value;
 
-	delta_ticks[1] = 1;
-	delta_ticks[2] = 1;
-	delta_ticks[3] = 1;
-	delta_ticks[4] = 1;
 	mailamsg.int_data = delta_ticks;
 
 
@@ -128,7 +124,7 @@ void appMain(void * arg)
 		timer_callback));
 
 	// config pcnt
-	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1) // encoder 0
+	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
 
 	// create executor
 	rclc_executor_t executor;
