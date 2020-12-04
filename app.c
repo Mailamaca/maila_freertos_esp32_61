@@ -39,7 +39,6 @@ int16_t ticks;
 #define IMU_N_DATA 3
 
 TickType_t TimePast;
-TickType_t TimeNow;
 
 
 
@@ -114,7 +113,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mailamsg.int_data.data[4] = 0;
 
 
-	updateIMU();
+	updateIMU(TimePast);
 
 	// prepare mailamsg.float_data
 	mailamsg.float_data.data = (float32_t *)calloc(IMU_N_DATA, sizeof(float32_t));
@@ -184,7 +183,7 @@ void appMain(void * arg)
 	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
 
 	// config imu mpu9250
-	setupIMU();
+	setupIMU(18,19,23,5);
 	
 	// create executor
 	rclc_executor_t executor;

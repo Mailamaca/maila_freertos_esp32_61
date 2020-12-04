@@ -1,10 +1,6 @@
-#include <driver/spi_master.h>
-#include "esp_system.h" //This inclusion configures the peripherals in the ESP system.
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/timers.h"
-#include "freertos/event_groups.h"
-#include "sdkconfig.h"
+#include "mpu9250.h"
+
+
 ////////////////////////////////////////////////////
 #define evtGetIMU                  ( 1 << 1 ) // 10
 ///////////////////////////////////////////////////
@@ -116,41 +112,11 @@ const uint8_t AK8963_CNTL2 = 0x0B;
 const uint8_t AK8963_RESET = 0x01;
 const uint8_t AK8963_ASA = 0x10;
 const uint8_t AK8963_WHO_AM_I = 0x00;
-////////////////////////////////////////////////
-float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};           // vector to hold quaternion
-float eInt[3] = {0.0f, 0.0f, 0.0f};              // vector to hold integral error for Mahony method
-float deltat = 0.0f;                             // integration interval for both filter schemes
 
-float accelScale;
-float gyroScale;
-float magScaleX, magScaleY, magScaleZ;
-
-
-#define Kp 7.50f
-// #define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
-#define Ki 1.7f
-uint8_t txData[2] = { };
-uint8_t rxData[21] = { };
-////////////////////////////////////////////////
-void triggerGet_IMU()
-{
-  BaseType_t xHigherPriorityTaskWoken;
-  xEventGroupSetBitsFromISR(eg, evtGetIMU, &xHigherPriorityTaskWoken);
-}
-///////////////////////////////////////////////
-void setup()
-{
-    eg = xEventGroupCreate();
-  Serial.begin( SerialDataBits );
-  xTaskCreatePinnedToCore ( fGetIMU, "v_getIMU", TaskStack30K, NULL, Priority4, NULL, TaskCore0 );
-}
-////
-void loop() {}
-////
 
 void setupIMU(int pinCLK,
-              int pinMOSI,
               int pinMISO,
+              int pinMOSI,
               int pinCS)
 {
   eg = xEventGroupCreate();
@@ -294,9 +260,9 @@ void setupIMU(int pinCLK,
   }
 }
 
-float _ax, _ay, _az;
 
-void updateIMU()
+
+void updateIMU(TickType_t TimePast)
 {
   
   // data counts
@@ -321,7 +287,7 @@ void updateIMU()
 
 
 
-  TimeNow = xTaskGetTickCount();
+  TickType_t TimeNow = xTaskGetTickCount();
   ////
   xEventGroupWaitBits (eg, evtGetIMU, pdTRUE, pdTRUE, portMAX_DELAY);
   
@@ -406,281 +372,6 @@ void updateIMU()
 }
 
 
-void fGetIMU( void *pvParameters )
-{
-  bool MPU9250_OK = false;
-  bool AK8963_OK = false;
-  esp_err_t intError;
-  // data counts
-  int16_t  _axcounts, _aycounts, _azcounts;
-  int16_t _gxcounts, _gycounts, _gzcounts;
-  int16_t _hxcounts, _hycounts, _hzcounts;
-  int16_t _tcounts;
-  // data buffer
-  float _ax, _ay, _az;
-  float _gx, _gy, _gz;
-  float _hx, _hy, _hz;
-  float _t;
-  float _accelScale;
-  float _gyroScale;
-  float _magScaleX, _magScaleY, _magScaleZ;
-  float _axb, _ayb, _azb;
-  float _gxb, _gyb, _gzb;
-  float _axs = 1.0f;
-  float _ays = 1.0f;
-  float _azs = 1.0f;
-  float _hxb, _hyb, _hzb;
-  float _hxs = 1.0f;
-  float _hys = 1.0f;
-  float _hzs = 1.0f;
-  ////
-  spi_bus_config_t bus_config = { };
-  bus_config.sclk_io_num = spiCLK; // CLK
-  bus_config.mosi_io_num = spiMOSI; // MOSI
-  bus_config.miso_io_num = spiMISO; // MISO
-  bus_config.quadwp_io_num = -1; // Not used
-  bus_config.quadhd_io_num = -1; // Not used
-  Serial.print(" Initializing bus error = ");
-  intError = spi_bus_initialize(HSPI_HOST, &bus_config, 1) ;
-  Serial.println ( intError );
-  //
-  spi_device_interface_config_t dev_config = { };  // initializes all field to 0
-  dev_config.address_bits     = 0;
-  dev_config.command_bits     = 0;
-  dev_config.dummy_bits       = 0;
-  dev_config.mode             = SPI_MODE3 ;
-  dev_config.duty_cycle_pos   = 0;
-  dev_config.cs_ena_posttrans = 0;
-  dev_config.cs_ena_pretrans  = 0;
-  dev_config.clock_speed_hz   = 1000000; // mpu 9250 spi read registers safe up to 1Mhz.
-  dev_config.spics_io_num     = csPinAG;
-  dev_config.flags            = 0;
-  dev_config.queue_size       = 1;
-  dev_config.pre_cb           = NULL;
-  dev_config.post_cb          = NULL;
-  Serial.print (" Adding device bus error = ");
-  intError = spi_bus_add_device(HSPI_HOST, &dev_config, &hAG);
-  Serial.println ( intError );
-  ////
-  ////
-  // spi_transaction_t trans_desc = { };
-  fWrite_AK8963( AK8963_CNTL1, AK8963_PWR_DOWN );
-  vTaskDelay ( 100 );
-  // fWriteSPIdata8bits( PWR_MGMNT_1, PWR_RESET );
-  // wait for MPU-9250 to come back up
-  // vTaskDelay(100);
-  // select clock source to gyro
-  // PWR_MGMNT_1,CLOCK_SEL_PLL
-  fWriteSPIdata8bits( PWR_MGMNT_1, CLOCK_SEL_PLL );
-  vTaskDelay(1);
-  // Do who am I MPU9250
-  fReadMPU9250 ( 2 , WHO_AM_I );
-  if ( (WHO_I_AMa == rxData[1]) || (WHO_I_AMb == rxData[1]) )
-  {
-    MPU9250_OK = true;
-  }
-  else
-  {
-    Serial.print( " I am not MPU9250! I am: ");
-    Serial.println ( rxData[1] );
-  }
-  if ( MPU9250_OK )
-  {
-    // enable I2C master mode
-    // USER_CTRL,I2C_MST_EN
-    fWriteSPIdata8bits( USER_CTRL, I2C_MST_EN );
-    vTaskDelay(1);
-    // set the I2C bus speed to 400 kHz
-    // I2C_MST_CTRL,I2C_MST_CLK
-    fWriteSPIdata8bits( I2C_MST_CTRL, I2C_MST_CLK );
-    vTaskDelay(1);
-    fWriteSPIdata8bits( SMPDIV, 0x04 );
-    vTaskDelay(1);
-    // DLPF ACCEL_CONFIG2,ACCEL_DLPF_184
-    fWriteSPIdata8bits( ACCEL_CONFIG2, ACCEL_DLPF_184 );
-    // CONFIG,GYRO_DLPF_184
-    fWriteSPIdata8bits( CONFIG, GYRO_DLPF_184 );
-    vTaskDelay(1);
-    // check AK8963_WHO_AM_I
-    fReadAK8963( AK8963_WHO_AM_I, 1 );
-    vTaskDelay(500); // giving the AK8963 lots of time to recover from reset
-    fReadMPU9250( 2 , EXT_SENS_DATA_00 );
-    if ( AK8963_IS == rxData[1] )
-    {
-      AK8963_OK = true;
-    }
-    else
-    {
-      Serial.print ( " AK8963_OK data return = " );
-      Serial.print ( rxData[0] );
-      Serial.println ( rxData[1] );
-    }
-    if ( AK8963_OK )
-    {
-      // set AK8963 to FUSE ROM access
-      // AK8963_CNTL1,AK8963_FUSE_ROM
-      fWrite_AK8963 ( AK8963_CNTL1, AK8963_FUSE_ROM );
-      vTaskDelay ( 100 ); // delay for mode change
-      // setting the accel range
-      //fWriteSPIdata8bits( ACCEL_CONFIG, ACCEL_FS_SEL_16G );
-      //_accelScale = 16.0f / 32768.0f; // setting the accel scale to 16G
-      //   ACCEL_CONFIG,ACCEL_FS_SEL_8G
-      // fWriteSPIdata8bits( ACCEL_CONFIG, ACCEL_FS_SEL_8G );
-      // _accelScale = 8.0f/32768.0f; // setting the accel scale to 8G
-      //    ACCEL_CONFIG,ACCEL_FS_SEL_4G
-      fWriteSPIdata8bits( ACCEL_CONFIG, ACCEL_FS_SEL_4G );
-      _accelScale = 4.0f/32768.0f; // setting the accel scale to 4G
-      // ACCEL_CONFIG,ACCEL_FS_SEL_2G
-      // fWriteSPIdata8bits( ACCEL_CONFIG, ACCEL_FS_SEL_2G );
-      // _accelScale = 2.0f/32768.0f;
-      // // _accelScale = G * 2.0f / 32767.5f; // setting the accel scale to 2G
-      // set gyro scale
-      // GYRO_CONFIG,GYRO_FS_SEL_1000DPS
-      // 250.0f/32768.0f;
-      fWriteSPIdata8bits( GYRO_CONFIG, GYRO_FS_SEL_500DPS );
-      _gyroScale = 500.0f/32768.0f;
-      // 2000.0f/32768.0f;
-      //fWriteSPIdata8bits( GYRO_CONFIG, GYRO_FS_SEL_1000DPS );
-      //_gyroScale = 1000.0f / 32768.0f;
-      // read the AK8963 ASA registers and compute magnetometer scale factors
-      //   set accel scale
-      fReadAK8963(AK8963_ASA, 3 );
-      fReadMPU9250 ( 3 , EXT_SENS_DATA_00 );
-      // convert to mG multiply by 10
-      _magScaleX = ((((float)rxData[0]) - 128.0f) / (256.0f) + 1.0f) * 4912.0f / 32760.0f; // micro Tesla
-      _magScaleY = ((((float)rxData[1]) - 128.0f) / (256.0f) + 1.0f) * 4912.0f / 32760.0f; // micro Tesla
-      _magScaleZ = ((((float)rxData[2]) - 128.0f) / (256.0f) + 1.0f) * 4912.0f / 32760.0f; // micro Tesla
-      Serial.print( " _magScaleX " );
-      Serial.print( _magScaleX );
-      Serial.print( " , " );
-      Serial.print( " _magScaleY " );
-      Serial.print( _magScaleY );
-      Serial.print( " , " );
-      Serial.print( " _magScaleZ " );
-      Serial.print( _magScaleZ );
-      Serial.print( " , " );
-      Serial.println();
-      // set AK8963 to 16 bit resolution, 100 Hz update rate
-      // AK8963_CNTL1,AK8963_CNT_MEAS2
-      fWrite_AK8963( AK8963_CNTL1, AK8963_CNT_MEAS2 );
-      // delay for mode change
-      vTaskDelay ( 100 );
-      // AK8963_HXL,7 ;
-      fReadAK8963(AK8963_HXL, 7 );
-      ////
-      /* setting the interrupt */
-      // INT_PIN_CFG,INT_PULSE_50US setup interrupt, 50 us pulse
-      fWriteSPIdata8bits( INT_PIN_CFG, INT_PULSE_50US );
-      // INT_ENABLE,INT_RAW_RDY_EN set to data ready
-      fWriteSPIdata8bits( INT_ENABLE, INT_RAW_RDY_EN );
-      pinMode( MPU_int_Pin, INPUT );
-      attachInterrupt( MPU_int_Pin, triggerGet_IMU, RISING );
-    }
-  }
-  ////////////////////////////////////////////////////////////////
-  TickType_t TimePast = xTaskGetTickCount();
-  TickType_t TimeNow = xTaskGetTickCount();
-
-  TickType_t xLastWakeTime;
-  // const TickType_t xFrequency = pdMS_TO_TICKS( 100 );
-  // Initialise the xLastWakeTime variable with the current time.
-  xLastWakeTime = xTaskGetTickCount();
-  ////
-  while (1)
-  {
-    xEventGroupWaitBits (eg, evtGetIMU, pdTRUE, pdTRUE, portMAX_DELAY);
-     if ( MPU9250_OK && AK8963_OK )
-    {
-      TimeNow = xTaskGetTickCount();
-      deltat = ( (float)TimeNow - (float)TimePast) / 1000.0f;
-      ////
-      // Serial.println ( " doing a loop MPU OK" );
-      fReadMPU9250 ( 8 , 0X3A );
-      _axcounts = (int16_t)(((int16_t)rxData[2] << 8) | rxData[3]) ;
-      _aycounts = (int16_t)(((int16_t)rxData[4] << 8) | rxData[5]) ;
-      _azcounts = (int16_t)(((int16_t)rxData[6] << 8) | rxData[7]) ;
-       fReadMPU9250 ( 6 , GYRO_OUTX );
-      _gxcounts = (int16_t)(((int16_t)rxData[0]) << 8) | rxData[1];
-      _gycounts = (int16_t)(((int16_t)rxData[2]) << 8) | rxData[3];
-      _gzcounts = (int16_t)(((int16_t)rxData[4]) << 8) | rxData[5];
-      // EXT_SENS_DATA_00
-      fReadMPU9250 ( 6 , EXT_SENS_DATA_00 );
-      _hxcounts = ((int16_t)rxData[1] << 8) | rxData[0] ;
-      _hycounts = ((int16_t)rxData[3] << 8) | rxData[2] ;;
-      _hzcounts = ((int16_t)rxData[5] << 8) | rxData[4] ;;
-      //
-      /// no biases applied just scale factor
-      _ax = (float)_axcounts * _accelScale;
-      _ay = (float)_aycounts * _accelScale;
-      _az = (float)_azcounts * _accelScale;
-      //
-      _gx = (float)_gxcounts * _gyroScale;
-      _gy = (float)_gycounts * _gyroScale;
-      _gz = (float)_gzcounts * _gyroScale;
-      //
-      _hx = (float)_hxcounts * _magScaleX;
-      _hy = (float)_hycounts * _magScaleY;
-      _hz = (float)_hzcounts * _magScaleZ;
-      ////
-      // Serial.print ( "ax = " );
-      // Serial.print ( _ax * 1000.0f );
-      // Serial.print ( " ay = " );
-      // Serial.print ( _ay * 1000.0f );
-      // Serial.print ( " az = " );
-      // Serial.print ( _az * 1000.0f );
-      // Serial.print ( " gx = " );
-      // Serial.print ( _gx * 1000.0f );
-      // Serial.print ( " gy = " );
-      // Serial.print ( _gy * 1000.0f );
-      // Serial.print ( " gz = " );
-      // Serial.print ( _gz * 1000.0f );
-      // Serial.print( " deg/s" );
-      // Serial.print ( " hx = " );
-      // Serial.print ( _hx );
-      // Serial.print ( " hy = " );
-      // Serial.print ( _hy );
-      // Serial.print ( " hz = " );
-      // Serial.print ( _hz );
-      // Serial.print ( " uT" );
-      // Serial.println();
-      // h value multiplied by 10 converts to mG from uT
-      MahonyQuaternionUpdate ( _ax, _ay, _az, _gx, _gy, _gz, _hx * 10.0f, _hy * 10.0f, _hz * 10.0f );
-      // Define output variables from updated quaternion---these are Tait-Bryan angles, commonly used in aircraft orientation.
-      // In this coordinate system, the positive z-axis is down toward Earth.
-      // Yaw is the angle between Sensor x-axis and Earth magnetic North (or true North if corrected for local declination, looking down on the sensor positive yaw is counterclockwise.
-      // Pitch is angle between sensor x-axis and Earth ground plane, toward the Earth is positive, up toward the sky is negative.
-      // Roll is angle between sensor y-axis and Earth ground plane, y-axis up is positive roll.
-      // These arise from the definition of the homogeneous rotation matrix constructed from quaternions.
-      // Tait-Bryan angles as well as Euler angles are non-commutative; that is, the get the correct orientation the rotations must be
-      // applied in the correct order which for this configuration is yaw, pitch, and then roll.
-      // For more see http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles which has additional links.
-      float yaw   = atan2f(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);
-      float pitch = -asinf(2.0f * (q[1] * q[3] - q[0] * q[2]));
-      float roll  = atan2f(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
-      pitch *= 180.0f / PI;
-      yaw   *= 180.0f / PI;
-      yaw   += 13.13f; // Declination
-      roll  *= 180.0f / PI;
-      TimePast = TimeNow;
-      Serial.print ( " Roll: ");
-      Serial.print ( roll, 6 );
-      Serial.print ( " Pitch: " );
-      Serial.print ( pitch, 6 );
-      Serial.print ( " Yaw: " );
-      Serial.println ( yaw, 6 );
-    }
-    else
-    {
-      Serial.print ( "WHO AM I FAILED!! ");
-      Serial.print ( "MPU9250 OK = ");
-      Serial.print ( MPU9250_OK );
-      Serial.print ( " AK8963 OK = " );
-      Serial.println ( AK8963_OK );
-    }
-    // xLastWakeTime = xTaskGetTickCount();
-  }
-  vTaskDelete(NULL);
-} // void fGetIMU( void *pvParameters )
 ///////////////////////////////////////////
 void fReadMPU9250 ( uint8_t byteReadSize, uint8_t addressToRead )
 {
@@ -699,8 +390,8 @@ void fReadMPU9250 ( uint8_t byteReadSize, uint8_t addressToRead )
   intError = spi_device_transmit( hAG, &trans_desc);
   if ( intError != 0 )
   {
-    Serial.print( " WHO I am MPU9250. Transmitting error = ");
-    Serial.println ( intError );
+    //Serial.print( " WHO I am MPU9250. Transmitting error = ");
+    //Serial.println ( intError );
   }
 
 } // void fReadMPU9250 ( uint8_t byteReadSize, uint8_t addressToRead )
@@ -720,8 +411,8 @@ void fWriteSPIdata8bits( uint8_t address, uint8_t DataToSend)
   intError = spi_device_transmit( hAG, &trans_desc);
   if ( intError != 0 )
   {
-    Serial.print( " Transmitting error = ");
-    Serial.println ( intError );
+    //Serial.print( " Transmitting error = ");
+    //Serial.println ( intError );
   }
 } // void fSendSPI( uint8_t count, uint8_t address, uint8_t DataToSend)
 ///////////////////////////////////////////////////////////////////////
@@ -758,13 +449,13 @@ void fwriteMUP9250register ( uint8_t addr, uint8_t sendData )
   trans_desc.length = 8 * 1 ; // total data bits
   trans_desc.tx_buffer = txData;
   txData[0] = sendData;
-  Serial.print( " write mpu register " );
-  Serial.print ( addr, HEX );
-  Serial.print ( " data " );
-  Serial.print ( sendData, HEX );
-  Serial.print ( ". Transmitting error = ");
+  //Serial.print( " write mpu register " );
+  //Serial.print ( addr, HEX );
+  //Serial.print ( " data " );
+  //Serial.print ( sendData, HEX );
+  //Serial.print ( ". Transmitting error = ");
   intError = spi_device_transmit( hAG, &trans_desc);
-  Serial.println ( intError );
+  //Serial.println ( intError );
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void MahonyQuaternionUpdate(float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz)
