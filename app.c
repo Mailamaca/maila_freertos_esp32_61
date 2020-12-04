@@ -84,24 +84,23 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	}
 	
 	// fill mailamsg.stamp
-	int64_t delta_sec = last_call_time / 1000000;
-	mailamsg.stamp.sec = delta_sec;
-	mailamsg.stamp.nanosec = last_call_time - delta_sec;
+	mailamsg.stamp.sec = last_call_time / 1000000;
+	mailamsg.stamp.nanosec = last_call_time - (mailamsg.stamp.sec*1000000);
 
 	// enc 0
 	pcnt_get_counter_value(PCNT_UNIT_0, &ticks);
 	delta_ticks[0] = getPCNTDelta(prev_ticks[0], ticks);
-	prev_ticks[0] = ticks;
+	prev_ticks[0] = 123;
 
-	delta_ticks[1] = 0;
-	delta_ticks[2] = 0;
-	delta_ticks[3] = 0;
-	delta_ticks[4] = 0;
+	delta_ticks[1] = 426;
+	delta_ticks[2] = 789;
+	delta_ticks[3] = 012;
+	delta_ticks[4] = 345;
 
 	// fill mailamsg.int_data
 	mailamsg.int_data.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
 	mailamsg.int_data.capacity = ENCODERS;
-	mailamsg.int_data.size = ENCODERS;
+	mailamsg.int_data.size = 0;
 	mailamsg.int_data.data = &delta_ticks;
 
 	// send msg
