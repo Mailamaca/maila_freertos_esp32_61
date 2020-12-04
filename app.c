@@ -52,7 +52,7 @@ void appMain(void * arg)
 
 	// create timer,
 	rcl_timer_t timer;
-	const unsigned int timer_timeout = 1000;
+	const unsigned int timer_timeout = 500;
 	RCCHECK(rclc_timer_init_default(
 		&timer,
 		&support,
