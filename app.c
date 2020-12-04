@@ -82,7 +82,7 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	}
 	
 	// fill mailamsg.stamp
-	mailamsg.stamp.sec = last_call_time / 1000;
+	mailamsg.stamp.sec = last_call_time / 1000000;
 	mailamsg.stamp.nanosec = last_call_time - mailamsg.stamp.sec;
 
 	// calc encoders
@@ -93,6 +93,11 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	pcnt_get_counter_value(PCNT_UNIT_0, &value);
 	delta_ticks[0] = getPCNTDelta(prev_ticks[0], value);
 	prev_ticks[0] = value;
+
+	delta_ticks[1] = 0;
+	delta_ticks[2] = 0;
+	delta_ticks[3] = 0;
+	delta_ticks[4] = 0;
 
 	// fill mailamsg.int_data
 	mailamsg.int_data.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
