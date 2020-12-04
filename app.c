@@ -18,6 +18,7 @@
 #include "driver/timer.h"
 #include "driver/gpio.h"
 #include "driver/pcnt.h"
+#include <esp_log.h>
 #endif
 
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Aborting.\n",__LINE__,(int)temp_rc);vTaskDelete(NULL);}}
@@ -90,6 +91,8 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	// enc 0
 	pcnt_get_counter_value(PCNT_UNIT_0, &ticks);
 	delta_ticks[0] = getPCNTDelta(prev_ticks[0], ticks);
+	ESP_LOGI("counter", ":%d", ticks);
+
 	prev_ticks[0] = 123;
 
 	delta_ticks[1] = 426;
@@ -100,7 +103,7 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	// fill mailamsg.int_data
 	mailamsg.int_data.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
 	mailamsg.int_data.capacity = ENCODERS;
-	mailamsg.int_data.size = 0;
+	mailamsg.int_data.size = 5;
 	mailamsg.int_data.data = &delta_ticks;
 
 	// send msg
