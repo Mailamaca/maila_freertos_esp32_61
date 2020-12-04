@@ -17,6 +17,7 @@ EventGroupHandle_t eg;
 #define TaskStack30K 30000
 #define Priority4 4
 #define MPU_int_Pin 34
+#define PI 3.14159
 ////////////////////////////////////////
 spi_device_handle_t hAG;
 ////////////////////////////////////////
