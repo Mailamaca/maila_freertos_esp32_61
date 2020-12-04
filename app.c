@@ -27,7 +27,7 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	RCLC_UNUSED(last_call_time);
 	if (timer != NULL) {
 		RCSOFTCHECK(rcl_publish(&publisher, &mailamsg, NULL));
-		mailamsg.stamp.time++;
+		mailamsg.stamp.sec++;
 	}
 }
 
@@ -64,7 +64,7 @@ void appMain(void * arg)
 	RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
 	RCCHECK(rclc_executor_add_timer(&executor, &timer));
 
-	mailamsg.stamp.time = 0;
+	mailamsg.stamp.sec = 0;
 	mailamsg.stamp.nanosec = 0;
 
 	while(1){
