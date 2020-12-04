@@ -91,7 +91,7 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 
 	// enc 0
 	pcnt_get_counter_value(PCNT_UNIT_0, &value);
-	delta_ticks.push_back(getPCNTDelta(prev_ticks[0], value));
+	delta_ticks[0] = getPCNTDelta(prev_ticks[0], value);
 	prev_ticks[0] = value;
 
 	// fill mailamsg.int_data
