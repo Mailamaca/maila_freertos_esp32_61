@@ -90,9 +90,7 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 
 	// enc 0
 	pcnt_get_counter_value(PCNT_UNIT_0, &ticks);
-	delta_ticks[0] = getPCNTDelta(prev_ticks[0], ticks);
-	ESP_LOGI("counter", ":%d", ticks);
-
+	delta_ticks[0] = getPCNTDelta(prev_ticks[0], ticks);	
 	prev_ticks[0] = 123;
 
 	delta_ticks[1] = 426;
@@ -104,7 +102,7 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mailamsg.int_data.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
 	mailamsg.int_data.capacity = ENCODERS;
 	mailamsg.int_data.size = 5;
-	mailamsg.int_data.data = &delta_ticks;
+	mailamsg.int_data.data = delta_ticks;
 
 	// send msg
 	RCSOFTCHECK(rcl_publish(&publisher, &mailamsg, NULL));
