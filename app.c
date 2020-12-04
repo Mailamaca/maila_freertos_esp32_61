@@ -28,7 +28,10 @@ rcl_publisher_t publisher;
 
 maila_msgs__msg__Esp32Data mailamsg;
 
-int16_t prev_ticks[5] = {};
+#define ENCODERS 5
+int16_t prev_ticks[ENCODERS] = {};
+
+
 
 void setPCNTParams(int pinPulse,
                  int pinCtrl,
@@ -63,10 +66,10 @@ void setPCNTParams(int pinPulse,
 
 int16_t getPCNTDelta(int16_t prev_value, int16_t new_value) {
 	
-	if (newValue >= prevValue) {
-		return (newValue - prevValue);
+	if (new_value >= prev_value) {
+		return (new_value - prev_value);
 	} else {
-		return (INT16_MAX - prevValue + newValue);
+		return (INT16_MAX - prev_value + new_value);
 	}
 }
 
@@ -78,20 +81,26 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 		return;
 	}
 	
+	// fill mailamsg.stamp
 	mailamsg.stamp.sec = last_call_time / 1000;
 	mailamsg.stamp.nanosec = last_call_time - mailamsg.stamp.sec;
 
-	//int16_t delta_ticks[5] = {};
-	std::vector<int16_t> delta_ticks; 
+	// calc encoders
+	int16_t delta_ticks[ENCODERS] = {};
 	int16_t value;
 
+	// enc 0
 	pcnt_get_counter_value(PCNT_UNIT_0, &value);
 	delta_ticks.push_back(getPCNTDelta(prev_ticks[0], value));
 	prev_ticks[0] = value;
 
-	mailamsg.int_data = delta_ticks;
+	// fill mailamsg.int_data
+	mailamsg.int_data.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
+	mailamsg.int_data.capacity = ENCODERS;
+	mailamsg.int_data.size = ENCODERS;
+	mailamsg.int_data.data = &delta_ticks;
 
-
+	// send msg
 	RCSOFTCHECK(rcl_publish(&publisher, &mailamsg, NULL));
 }
 
