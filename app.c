@@ -95,11 +95,11 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	// enc 0
 	pcnt_get_counter_value(PCNT_UNIT_0, &ticks);
 	mailamsg.int_data.data[0] = getPCNTDelta(prev_ticks[0], ticks);	
-	prev_ticks[0] = 123;
+	prev_ticks[0] = ticks;
 
 	mailamsg.int_data.data[1] = 426;
 	mailamsg.int_data.data[2] = 789;
-	mailamsg.int_data.data[3] = 012;
+	mailamsg.int_data.data[3] = 123;
 	mailamsg.int_data.data[4] = 345;
 
 	
