@@ -272,8 +272,8 @@ void appMain(void * arg)
 	// create executor
 	rclc_executor_t executor;
 	RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
-	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
 	RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
+	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
 
 	/*while(1){
 		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
