@@ -62,7 +62,7 @@ esp_err_t i2c_mpu9250_init(calibration_t *c)
   vTaskDelay(10 / portTICK_RATE_MS);
 
   // define gyro range
-  ESP_ERROR_CHECK(set_full_scale_gyro_range(MPU9250_GYRO_FS_250));
+  ESP_ERROR_CHECK(set_full_scale_gyro_range(MPU9250_GYRO_FS_500));
   vTaskDelay(10 / portTICK_RATE_MS);
 
   // define accel range

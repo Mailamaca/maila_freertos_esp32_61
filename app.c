@@ -45,10 +45,9 @@ maila_msgs__msg__Esp32Data mailamsg;
 int16_t prev_ticks[ENCODERS] = {};
 int16_t ticks;
 
-#define IMU_N_DATA 3
-float _ax, _ay, _az;
-
-TickType_t TimePast;
+#define IMU_N_DATA 9
+vector_t va, vg, vm;
+uint64_t imu_readings = 0;
 
 calibration_t cal = {
     .mag_offset = {.x = 25.183594, .y = 57.519531, .z = -62.648438},
@@ -58,6 +57,8 @@ calibration_t cal = {
     .accel_scale_hi = {.x = 1.013558, .y = 1.011903, .z = 1.019645},
 
     .gyro_bias_offset = {.x = 0.303956, .y = -1.049768, .z = -0.403782}};
+
+
 
 
 void setPCNTParams(int pinPulse,
@@ -130,23 +131,22 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mailamsg.int_data.data[3] = 0;
 	mailamsg.int_data.data[4] = 0;
 
-	// imu
-	vector_t va, vg, vm;
-
-    	// Get the Accelerometer, Gyroscope and Magnetometer values.
-    	ESP_ERROR_CHECK(get_accel_gyro_mag(&va, &vg, &vm));
-
-	
-	//updateIMU(TimePast);
-
 	// prepare mailamsg.float_data
 	mailamsg.float_data.data = (float *)calloc(IMU_N_DATA, sizeof(float));
 	mailamsg.float_data.capacity = IMU_N_DATA;
 	mailamsg.float_data.size = IMU_N_DATA;
 
-	mailamsg.float_data.data[0] = va.x;
-	mailamsg.float_data.data[1] = va.y;
-	mailamsg.float_data.data[2] = va.z;
+	// imu data
+	mailamsg.float_data.data[0] = va.x / imu_readings;
+	mailamsg.float_data.data[1] = va.y / imu_readings;
+	mailamsg.float_data.data[2] = va.z / imu_readings;
+	mailamsg.float_data.data[3] = vg.x / imu_readings;
+	mailamsg.float_data.data[4] = vg.y / imu_readings;
+	mailamsg.float_data.data[5] = vg.z / imu_readings;
+	mailamsg.float_data.data[6] = vm.x / imu_readings;
+	mailamsg.float_data.data[7] = vm.y / imu_readings;
+	mailamsg.float_data.data[8] = vm.z / imu_readings;
+	imu_readings = 0;
 	
 
 	// send msg
@@ -161,9 +161,58 @@ void imu_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 		return;
 	}
 
-	
-		
+	vector_t _va, _vg, _vm;
 
+	// Get the Accelerometer, Gyroscope and Magnetometer values.
+    	ESP_ERROR_CHECK(get_accel_gyro_mag(&_va, &_vg, &_vm));
+		
+	// Transform these values to the orientation of our device.
+	transform_accel_gyro(&_va);
+	transform_accel_gyro(&_vg);
+	transform_mag(&_vm);
+
+	va += _va;
+	vg += _vg;
+	vm += _vm;
+	imu_readings++;
+
+
+
+
+}
+
+/**
+ * Transformation:
+ *  - Rotate around Z axis 180 degrees
+ *  - Rotate around X axis -90 degrees
+ * @param  {object} s {x,y,z} sensor
+ * @return {object}   {x,y,z} transformed
+ */
+static void transform_accel_gyro(vector_t *v)
+{
+  float x = v->x;
+  float y = v->y;
+  float z = v->z;
+
+  v->x = -x;
+  v->y = -z;
+  v->z = -y;
+}
+
+/**
+ * Transformation: to get magnetometer aligned
+ * @param  {object} s {x,y,z} sensor
+ * @return {object}   {x,y,z} transformed
+ */
+static void transform_mag(vector_t *v)
+{
+  float x = v->x;
+  float y = v->y;
+  float z = v->z;
+
+  v->x = -y;
+  v->y = z;
+  v->z = -x;
 }
 
 void appMain(void * arg)
@@ -187,29 +236,30 @@ void appMain(void * arg)
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer;
-	const unsigned int publisher_timer_timeout = 1500;
+	const unsigned int publisher_timer_timeout = 100;
 	RCCHECK(rclc_timer_init_default(
 		&publisher_timer,
 		&support,
 		RCL_MS_TO_NS(publisher_timer_timeout),
 		publisher_timer_callback));
 
-	/*
+	
 	// create imu_timer
 	rcl_timer_t imu_timer;
-	const unsigned int imu_timer_timeout = 500;
+	const unsigned int imu_timer_timeout = 2;
 	RCCHECK(rclc_timer_init_default(
 		&imu_timer,
 		&support,
 		RCL_MS_TO_NS(imu_timer_timeout),
 		imu_timer_callback));
-	*/
+	
 
 	// config pcnt
 	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
 
 	// config imu mpu9250
 	i2c_mpu9250_init(&cal);
+	//MadgwickAHRSinit(500, 0.8); // calc orientation on the raspberry
 	
 	// create executor
 	rclc_executor_t executor;
@@ -217,13 +267,13 @@ void appMain(void * arg)
 	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
 	//RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
 
-	while(1){
+	/*while(1){
 		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
 		//usleep(100000);
-	}
+	}*/
 
 	// spin forever
-	//rclc_executor_spin(&executor);
+	rclc_executor_spin(&executor);
 
 	// free resources
 	RCCHECK(rcl_publisher_fini(&publisher, &node))
