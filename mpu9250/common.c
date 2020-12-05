@@ -21,7 +21,7 @@
 
 #include "common.h"
 
-void pause(void)
+void mpu9250pause(void)
 {
 
   static uint64_t start = 0;

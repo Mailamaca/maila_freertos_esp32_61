@@ -45,6 +45,7 @@ int16_t prev_ticks[ENCODERS] = {};
 int16_t ticks;
 
 #define IMU_N_DATA 3
+float _ax, _ay, _az;
 
 TickType_t TimePast;
 
