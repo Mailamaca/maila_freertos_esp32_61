@@ -59,7 +59,39 @@ calibration_t cal = {
     .gyro_bias_offset = {.x = 0.303956, .y = -1.049768, .z = -0.403782}};
 
 
+/**
+ * Transformation:
+ *  - Rotate around Z axis 180 degrees
+ *  - Rotate around X axis -90 degrees
+ * @param  {object} s {x,y,z} sensor
+ * @return {object}   {x,y,z} transformed
+ */
+static void transform_accel_gyro(vector_t *v)
+{
+  float x = v->x;
+  float y = v->y;
+  float z = v->z;
 
+  v->x = -x;
+  v->y = -z;
+  v->z = -y;
+}
+
+/**
+ * Transformation: to get magnetometer aligned
+ * @param  {object} s {x,y,z} sensor
+ * @return {object}   {x,y,z} transformed
+ */
+static void transform_mag(vector_t *v)
+{
+  float x = v->x;
+  float y = v->y;
+  float z = v->z;
+
+  v->x = -y;
+  v->y = z;
+  v->z = -x;
+}
 
 void setPCNTParams(int pinPulse,
                  int pinCtrl,
@@ -171,9 +203,15 @@ void imu_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	transform_accel_gyro(&_vg);
 	transform_mag(&_vm);
 
-	va += _va;
-	vg += _vg;
-	vm += _vm;
+	va.x += _va.x;
+	va.y += _va.y;
+	va.z += _va.z;
+	vg.x += _vg.x;
+	vg.y += _vg.y;
+	vg.z += _vg.z;
+	vm.x += _vm.x;
+	vm.y += _vm.y;
+	vm.z += _vm.z;
 	imu_readings++;
 
 
@@ -181,39 +219,7 @@ void imu_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 
 }
 
-/**
- * Transformation:
- *  - Rotate around Z axis 180 degrees
- *  - Rotate around X axis -90 degrees
- * @param  {object} s {x,y,z} sensor
- * @return {object}   {x,y,z} transformed
- */
-static void transform_accel_gyro(vector_t *v)
-{
-  float x = v->x;
-  float y = v->y;
-  float z = v->z;
 
-  v->x = -x;
-  v->y = -z;
-  v->z = -y;
-}
-
-/**
- * Transformation: to get magnetometer aligned
- * @param  {object} s {x,y,z} sensor
- * @return {object}   {x,y,z} transformed
- */
-static void transform_mag(vector_t *v)
-{
-  float x = v->x;
-  float y = v->y;
-  float z = v->z;
-
-  v->x = -y;
-  v->y = z;
-  v->z = -x;
-}
 
 void appMain(void * arg)
 {
