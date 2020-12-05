@@ -130,7 +130,13 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mailamsg.int_data.data[3] = 0;
 	mailamsg.int_data.data[4] = 0;
 
+	// imu
+	vector_t va, vg, vm;
 
+    	// Get the Accelerometer, Gyroscope and Magnetometer values.
+    	ESP_ERROR_CHECK(get_accel_gyro_mag(&va, &vg, &vm));
+
+	
 	//updateIMU(TimePast);
 
 	// prepare mailamsg.float_data
@@ -138,9 +144,9 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mailamsg.float_data.capacity = IMU_N_DATA;
 	mailamsg.float_data.size = IMU_N_DATA;
 
-	mailamsg.float_data.data[1] = _ax;
-	mailamsg.float_data.data[1] = _ay;
-	mailamsg.float_data.data[1] = _az;
+	mailamsg.float_data.data[0] = va.x;
+	mailamsg.float_data.data[1] = va.y;
+	mailamsg.float_data.data[2] = va.z;
 	
 
 	// send msg
