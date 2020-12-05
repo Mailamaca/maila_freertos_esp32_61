@@ -244,7 +244,7 @@ void appMain(void * arg)
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer;
-	const unsigned int publisher_timer_timeout = 100;
+	const unsigned int publisher_timer_timeout = 1000;
 	RCCHECK(rclc_timer_init_default(
 		&publisher_timer,
 		&support,
@@ -254,7 +254,7 @@ void appMain(void * arg)
 	
 	// create imu_timer
 	rcl_timer_t imu_timer;
-	const unsigned int imu_timer_timeout = 2;
+	const unsigned int imu_timer_timeout = 100;
 	RCCHECK(rclc_timer_init_default(
 		&imu_timer,
 		&support,
