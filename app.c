@@ -201,7 +201,8 @@ void imu_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	vector_t _va, _vg, _vm;
 
 	// Get the Accelerometer, Gyroscope and Magnetometer values.
-    	ESP_ERROR_CHECK(get_accel_gyro_mag(&_va, &_vg, &_vm));
+    	//ESP_ERROR_CHECK(get_accel_gyro_mag(&_va, &_vg, &_vm));
+	ESP_ERROR_CHECK(get_accel_gyro(&_va, &_vg));
 		
 	// Transform these values to the orientation of our device.
 	transform_accel_gyro(&_va);
