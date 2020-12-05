@@ -168,6 +168,28 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mailamsg.float_data.capacity = IMU_N_DATA;
 	mailamsg.float_data.size = IMU_N_DATA;
 
+	vector_t _va, _vg, _vm;
+
+	// Get the Accelerometer, Gyroscope and Magnetometer values.
+    	ESP_ERROR_CHECK(get_accel_gyro_mag(&_va, &_vg, &_vm));
+		
+	// Transform these values to the orientation of our device.
+	transform_accel_gyro(&_va);
+	transform_accel_gyro(&_vg);
+	transform_mag(&_vm);
+
+	va.x += _va.x;
+	va.y += _va.y;
+	va.z += _va.z;
+	vg.x += _vg.x;
+	vg.y += _vg.y;
+	vg.z += _vg.z;
+	vm.x += _vm.x;
+	vm.y += _vm.y;
+	vm.z += _vm.z;
+	imu_readings++;
+
+
 	// imu data
 	if (imu_readings > 0) {
 		mailamsg.float_data.data[0] = va.x / imu_readings;
@@ -179,7 +201,11 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 		mailamsg.float_data.data[6] = vm.x / imu_readings;
 		mailamsg.float_data.data[7] = vm.y / imu_readings;
 		mailamsg.float_data.data[8] = vm.z / imu_readings;
+		
 		imu_readings = 0;
+		va.x = va.y = va.z = 0;
+		vg.x = vg.y = vg.z = 0;
+		vm.x = vm.y = vm.z = 0;
 	}
 		
 
@@ -253,13 +279,13 @@ void appMain(void * arg)
 
 	
 	// create imu_timer
-	rcl_timer_t imu_timer;
+	/*rcl_timer_t imu_timer;
 	const unsigned int imu_timer_timeout = 100;
 	RCCHECK(rclc_timer_init_default(
 		&imu_timer,
 		&support,
 		RCL_MS_TO_NS(imu_timer_timeout),
-		imu_timer_callback));
+		imu_timer_callback));*/
 	
 
 	// config pcnt
@@ -272,7 +298,7 @@ void appMain(void * arg)
 	// create executor
 	rclc_executor_t executor;
 	RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
-	RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
+	//RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
 	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
 
 	/*while(1){
