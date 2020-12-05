@@ -28,10 +28,10 @@
 #include "driver/i2c.h"
 #endif
 
-#include "ahrs/MadgwickAHRS.h"
-#include "mpu9250/mpu9250.h"
-#include "mpu9250/calibrate.h"
-#include "mpu9250/common.h"
+#include "MadgwickAHRS.h"
+#include "mpu9250.h"
+#include "alibrate.h"
+#include "common.h"
 
 #define I2C_MASTER_NUM I2C_NUM_0 /*!< I2C port number for master dev */
 
