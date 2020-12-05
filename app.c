@@ -161,7 +161,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mailamsg.int_data.data[1] = 0;
 	mailamsg.int_data.data[2] = 0;
 	mailamsg.int_data.data[3] = 0;
-	mailamsg.int_data.data[4] = 0;
+	mailamsg.int_data.data[4] = imu_readings;
 
 	// prepare mailamsg.float_data
 	mailamsg.float_data.data = (float *)calloc(IMU_N_DATA, sizeof(float));
@@ -254,7 +254,7 @@ void appMain(void * arg)
 	
 	// create imu_timer
 	rcl_timer_t imu_timer = rcl_get_zero_initialized_timer();
-	const unsigned int imu_timer_timeout = 100;
+	const unsigned int imu_timer_timeout = 2;
 	RCCHECK(rclc_timer_init_default(
 		&imu_timer,
 		&support,
