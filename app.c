@@ -169,17 +169,19 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mailamsg.float_data.size = IMU_N_DATA;
 
 	// imu data
-	mailamsg.float_data.data[0] = va.x / imu_readings;
-	mailamsg.float_data.data[1] = va.y / imu_readings;
-	mailamsg.float_data.data[2] = va.z / imu_readings;
-	mailamsg.float_data.data[3] = vg.x / imu_readings;
-	mailamsg.float_data.data[4] = vg.y / imu_readings;
-	mailamsg.float_data.data[5] = vg.z / imu_readings;
-	mailamsg.float_data.data[6] = vm.x / imu_readings;
-	mailamsg.float_data.data[7] = vm.y / imu_readings;
-	mailamsg.float_data.data[8] = vm.z / imu_readings;
-	imu_readings = 0;
-	
+	if (imu_readings > 0) {
+		mailamsg.float_data.data[0] = va.x / imu_readings;
+		mailamsg.float_data.data[1] = va.y / imu_readings;
+		mailamsg.float_data.data[2] = va.z / imu_readings;
+		mailamsg.float_data.data[3] = vg.x / imu_readings;
+		mailamsg.float_data.data[4] = vg.y / imu_readings;
+		mailamsg.float_data.data[5] = vg.z / imu_readings;
+		mailamsg.float_data.data[6] = vm.x / imu_readings;
+		mailamsg.float_data.data[7] = vm.y / imu_readings;
+		mailamsg.float_data.data[8] = vm.z / imu_readings;
+		imu_readings = 0;
+	}
+		
 
 	// send msg
 	RCSOFTCHECK(rcl_publish(&publisher, &mailamsg, NULL));
@@ -271,7 +273,7 @@ void appMain(void * arg)
 	rclc_executor_t executor;
 	RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
 	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
-	//RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
+	RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
 
 	/*while(1){
 		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
