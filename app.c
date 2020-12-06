@@ -213,7 +213,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	int64_t act_nanosec = (act_time - (act_sec*1000000)) * 1000;
 
 	// encoders
-	read_encoders();
+	/*read_encoders();
 
 	// tick_msg
 	tick_msg.header.stamp.sec = act_sec;
@@ -223,7 +223,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	for (int i=0; i < ENCODERS; i++) {
 		tick_msg.ticks.data[i] = delta_ticks[i];
 	}
-	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
+	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));*/
 
 	// imu
 	if (imu_readings <= 0)
@@ -238,7 +238,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	imu_msg.linear_acceleration.x = va.x / imu_readings;
 	imu_msg.linear_acceleration.y = va.y / imu_readings;
 	imu_msg.linear_acceleration.z = va.z / imu_readings;
-	//RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
+	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
 
 	// mag_msg
 	mag_msg.header.stamp.sec = act_sec;
@@ -270,7 +270,7 @@ void appMain(void * arg)
 	RCCHECK(rclc_node_init_default(&node, "maila_freertos_esp32_61", "", &support));
 
 	// create imu publisher
-	/*RCCHECK(rclc_publisher_init_default(
+	RCCHECK(rclc_publisher_init_default(
 		&imu_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
@@ -278,7 +278,7 @@ void appMain(void * arg)
 	prepare_imu_msg();
 
 	// create mag publisher
-	RCCHECK(rclc_publisher_init_default(
+	/*RCCHECK(rclc_publisher_init_default(
 		&mag_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, MagneticField),
@@ -286,12 +286,12 @@ void appMain(void * arg)
 	prepare_mag_msg();*/
 
 	// create tick publisher
-	RCCHECK(rclc_publisher_init_default(
+	/*RCCHECK(rclc_publisher_init_default(
 		&tick_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, TickDelta),
 		"sensors/encoders/tick"));
-	prepare_tick_msg();	
+	prepare_tick_msg();*/	
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer = rcl_get_zero_initialized_timer();
@@ -300,7 +300,7 @@ void appMain(void * arg)
 		&publisher_timer,
 		&support,
 		RCL_MS_TO_NS(publisher_timer_timeout),
-		publisher_timer_callback));	
+		publisher_timer_callback));
 
 	// config pcnt
 	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
@@ -318,13 +318,13 @@ void appMain(void * arg)
 	
 	while(true) {
 		read_imu();
-		rclc_executor_spin_some(&executor, 100); // nanosec
+		rclc_executor_spin_some(&executor, 1000000); // nanosec
 	}
 
 	// free resources
-	//RCCHECK(rcl_publisher_fini(&imu_publisher, &node))
+	RCCHECK(rcl_publisher_fini(&imu_publisher, &node))
 	//RCCHECK(rcl_publisher_fini(&mag_publisher, &node))
-	RCCHECK(rcl_publisher_fini(&tick_publisher, &node))
+	//RCCHECK(rcl_publisher_fini(&tick_publisher, &node))
 	RCCHECK(rcl_node_fini(&node))
 
   	vTaskDelete(NULL);
