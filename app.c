@@ -107,7 +107,8 @@ void setPCNTParams(int pinPulse,
                  int pinCtrl,
                  pcnt_channel_t channel,
                  pcnt_unit_t unit,
-                 uint16_t filter) {
+                 uint16_t filter)
+{
 
 	pcnt_config_t pcnt_config;
       	pcnt_config.pulse_gpio_num = pinPulse;
@@ -134,7 +135,8 @@ void setPCNTParams(int pinPulse,
 
 }
 
-int16_t getPCNTDelta(int16_t prev_value, int16_t new_value) {
+int16_t getPCNTDelta(int16_t prev_value, int16_t new_value)
+{
 	
 	if (new_value >= prev_value) {
 		return (new_value - prev_value);
@@ -184,12 +186,10 @@ void read_encoders()
 
 void prepare_imu_msg()
 {
-
 }
 
 void prepare_mag_msg()
 {
-
 }
 
 void prepare_tick_msg()
@@ -225,8 +225,11 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	}
 	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
 
+	// imu
+	if (imu_readings <= 0)
+		read_imu();
+	
 	// imu_msg
-	if (imu_readings <= 0) read_imu();
 	imu_msg.header.stamp.sec = act_sec;
 	imu_msg.header.stamp.nanosec = act_nanosec;
 	imu_msg.angular_velocity.x = vg.x / imu_readings;
@@ -238,7 +241,6 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
 
 	// mag_msg
-	if (imu_readings <= 0) read_imu();
 	mag_msg.header.stamp.sec = act_sec;
 	mag_msg.header.stamp.nanosec = act_nanosec;
 	mag_msg.magnetic_field.x = vm.x / imu_readings;
@@ -316,7 +318,7 @@ void appMain(void * arg)
 	
 	while(true) {
 		read_imu();
-		rclc_executor_spin_some(&executor, 1000); // nanosec
+		rclc_executor_spin_some(&executor, 1000000); // nanosec
 	}
 
 	// free resources
