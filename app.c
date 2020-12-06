@@ -145,10 +145,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mailamsg.stamp.sec = last_call_time / (1000*1000*1000);
 	mailamsg.stamp.nanosec = last_call_time - (mailamsg.stamp.sec*(1000*1000*1000));
 
-	// prepare mailamsg.int_data
-	mailamsg.int_data.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
-	mailamsg.int_data.capacity = ENCODERS;
-	mailamsg.int_data.size = ENCODERS;
+	
 
 	// encoders
 	for (int i=0; i < ENCODERS; i++) {
@@ -163,10 +160,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mailamsg.int_data.data[3] = 0;
 	mailamsg.int_data.data[4] = imu_readings;
 
-	// prepare mailamsg.float_data
-	mailamsg.float_data.data = (float *)calloc(IMU_N_DATA, sizeof(float));
-	mailamsg.float_data.capacity = IMU_N_DATA;
-	mailamsg.float_data.size = IMU_N_DATA;
+	
 	
 	// imu data
 	if (imu_readings > 0) {
@@ -242,6 +236,15 @@ void appMain(void * arg)
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, Esp32Data),
 		"maila_freertos_esp32_61"));
+
+	// prepare mailamsg.int_data
+	mailamsg.int_data.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
+	mailamsg.int_data.capacity = ENCODERS;
+	mailamsg.int_data.size = ENCODERS;
+	// prepare mailamsg.float_data
+	mailamsg.float_data.data = (float *)calloc(IMU_N_DATA, sizeof(float));
+	mailamsg.float_data.capacity = IMU_N_DATA;
+	mailamsg.float_data.size = IMU_N_DATA;
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer = rcl_get_zero_initialized_timer();
