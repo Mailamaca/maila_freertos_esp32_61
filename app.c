@@ -203,15 +203,15 @@ void prepare_tick_msg()
 
 void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 {
-	int64_t act_time = esp_timer_get_time(); // us since start
-	int64_t act_sec = act_time / 1000000;
-	int64_t act_nanosec = (act_time - (act_sec*1000000)) * 1000;
-
 	//RCLC_UNUSED(last_call_time);
 	if (timer == NULL) {
 		return;
 	}
 	
+	int64_t act_time = 0; //esp_timer_get_time(); // us since start
+	int64_t act_sec = act_time / 1000000;
+	int64_t act_nanosec = (act_time - (act_sec*1000000)) * 1000;
+
 	// encoders
 	read_encoders();
 
@@ -239,8 +239,8 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 
 	// mag_msg
 	if (imu_readings <= 0) read_imu();
-	imu_msg.header.stamp.sec = act_sec;
-	imu_msg.header.stamp.nanosec = act_nanosec;
+	mag_msg.header.stamp.sec = act_sec;
+	mag_msg.header.stamp.nanosec = act_nanosec;
 	mag_msg.magnetic_field.x = vm.x / imu_readings;
 	mag_msg.magnetic_field.y = vm.y / imu_readings;
 	mag_msg.magnetic_field.z = vm.z / imu_readings;
