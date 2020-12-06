@@ -202,9 +202,9 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 		return;
 	}
 	
-	int64_t act_time = 0; //esp_timer_get_time(); // us since start
-	int64_t act_sec = act_time / (1000*1000);
-	int64_t act_nanosec = (act_time - (act_sec*(1000*1000))) * 1000;
+	//int64_t act_time = 0; //esp_timer_get_time(); // us since start
+	//int64_t act_sec = act_time / (1000*1000);
+	//int64_t act_nanosec = (act_time - (act_sec*(1000*1000))) * 1000;
 
 	// encoders
 	//read_encoders();
@@ -215,7 +215,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
 	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
 	for (int i=0; i < ENCODERS; i++) {
-		tick_msg.ticks.data[i] = 0; //delta_ticks[i];
+		//tick_msg.ticks.data[i] = 0; //delta_ticks[i];
 	}
 	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
 
@@ -263,22 +263,6 @@ void appMain(void * arg)
 	rcl_node_t node;
 	RCCHECK(rclc_node_init_default(&node, "maila_freertos_esp32_61", "", &support));
 
-	// create imu publisher
-	RCCHECK(rclc_publisher_init_default(
-		&imu_publisher,
-		&node,
-		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-		"sensors/imu/data_raw"));
-	prepare_imu_msg();
-
-	// create mag publisher
-	RCCHECK(rclc_publisher_init_default(
-		&mag_publisher,
-		&node,
-		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, MagneticField),
-		"sensors/imu/mag"));
-	prepare_mag_msg();
-
 	// create tick publisher
 	RCCHECK(rclc_publisher_init_default(
 		&tick_publisher,
@@ -316,9 +300,9 @@ void appMain(void * arg)
 	}
 
 	// free resources
-	RCCHECK(rcl_publisher_fini(&imu_publisher, &node))
+	//RCCHECK(rcl_publisher_fini(&imu_publisher, &node))
 	//RCCHECK(rcl_publisher_fini(&mag_publisher, &node))
-	//RCCHECK(rcl_publisher_fini(&tick_publisher, &node))
+	RCCHECK(rcl_publisher_fini(&tick_publisher, &node))
 	RCCHECK(rcl_node_fini(&node))
 
   	vTaskDelete(NULL);
