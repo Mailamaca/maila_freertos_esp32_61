@@ -215,7 +215,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
 	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
 	for (int i=0; i < ENCODERS; i++) {
-		tick_msg.ticks.data[i] = 0 //delta_ticks[i];
+		tick_msg.ticks.data[i] = 0; //delta_ticks[i];
 	}
 	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
 
