@@ -255,7 +255,7 @@ void appMain(void * arg)
 	
 	// create imu_timer
 	rcl_timer_t imu_timer = rcl_get_zero_initialized_timer();
-	const unsigned int imu_timer_timeout = 2;
+	const unsigned int imu_timer_timeout = 1;
 	RCCHECK(rclc_timer_init_default(
 		&imu_timer,
 		&support,
