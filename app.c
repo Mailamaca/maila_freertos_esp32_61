@@ -318,7 +318,7 @@ void appMain(void * arg)
 	
 	while(true) {
 		read_imu();
-		rclc_executor_spin_some(&executor, 1000000); // nanosec
+		rclc_executor_spin_some(&executor, 100); // nanosec
 	}
 
 	// free resources
