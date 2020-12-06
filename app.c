@@ -54,7 +54,6 @@ int16_t prev_ticks[ENCODERS] = {};
 int16_t delta_ticks[ENCODERS] = {};
 int16_t ticks;
 
-#define IMU_N_DATA 9
 vector_t va, vg, vm;
 uint64_t imu_readings = 0;
 
@@ -109,7 +108,6 @@ void setPCNTParams(int pinPulse,
                  pcnt_unit_t unit,
                  uint16_t filter)
 {
-
 	pcnt_config_t pcnt_config;
       	pcnt_config.pulse_gpio_num = pinPulse;
       	pcnt_config.ctrl_gpio_num = pinCtrl;
@@ -132,12 +130,10 @@ void setPCNTParams(int pinPulse,
 	pcnt_counter_pause(unit);
 	pcnt_counter_clear(unit);
 	pcnt_counter_resume(unit);
-
 }
 
 int16_t getPCNTDelta(int16_t prev_value, int16_t new_value)
-{
-	
+{	
 	if (new_value >= prev_value) {
 		return (new_value - prev_value);
 	} else {
@@ -147,7 +143,6 @@ int16_t getPCNTDelta(int16_t prev_value, int16_t new_value)
 
 void read_imu()
 {
-
 	vector_t _va, _vg, _vm;
 
 	// Get the Accelerometer, Gyroscope and Magnetometer values.
@@ -169,7 +164,6 @@ void read_imu()
 	vm.y += _vm.y;
 	vm.z += _vm.z;
 	imu_readings++;
-
 }
 
 void read_encoders()
@@ -186,19 +180,19 @@ void read_encoders()
 
 void prepare_imu_msg()
 {
+	return;
 }
 
 void prepare_mag_msg()
 {
+	return;
 }
 
 void prepare_tick_msg()
 {
-
 	tick_msg.ticks.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
 	tick_msg.ticks.capacity = ENCODERS;
 	tick_msg.ticks.size = ENCODERS;
-
 }
 
 void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
@@ -209,11 +203,11 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	}
 	
 	int64_t act_time = 0; //esp_timer_get_time(); // us since start
-	int64_t act_sec = act_time / 1000000;
-	int64_t act_nanosec = (act_time - (act_sec*1000000)) * 1000;
+	int64_t act_sec = act_time / (1000*1000);
+	int64_t act_nanosec = (act_time - (act_sec*(1000*1000))) * 1000;
 
 	// encoders
-	/*read_encoders();
+	//read_encoders();
 
 	// tick_msg
 	tick_msg.header.stamp.sec = act_sec;
@@ -221,16 +215,16 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
 	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
 	for (int i=0; i < ENCODERS; i++) {
-		tick_msg.ticks.data[i] = delta_ticks[i];
+		tick_msg.ticks.data[i] = 0 //delta_ticks[i];
 	}
-	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));*/
+	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
 
 	// imu
-	if (imu_readings <= 0)
-		read_imu();
+	//if (imu_readings <= 0)
+	//	read_imu();
 	
 	// imu_msg
-	imu_msg.header.stamp.sec = act_sec;
+	/*imu_msg.header.stamp.sec = act_sec;
 	imu_msg.header.stamp.nanosec = act_nanosec;
 	imu_msg.angular_velocity.x = vg.x / imu_readings;
 	imu_msg.angular_velocity.y = vg.y / imu_readings;
@@ -238,15 +232,15 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	imu_msg.linear_acceleration.x = va.x / imu_readings;
 	imu_msg.linear_acceleration.y = va.y / imu_readings;
 	imu_msg.linear_acceleration.z = va.z / imu_readings;
-	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
+	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));*/
 
 	// mag_msg
-	mag_msg.header.stamp.sec = act_sec;
+	/*mag_msg.header.stamp.sec = act_sec;
 	mag_msg.header.stamp.nanosec = act_nanosec;
 	mag_msg.magnetic_field.x = vm.x / imu_readings;
 	mag_msg.magnetic_field.y = vm.y / imu_readings;
 	mag_msg.magnetic_field.z = vm.z / imu_readings;
-	//RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
+	//RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));*/
 	
 	// reset
 	imu_readings = 0;
@@ -278,20 +272,20 @@ void appMain(void * arg)
 	prepare_imu_msg();
 
 	// create mag publisher
-	/*RCCHECK(rclc_publisher_init_default(
+	RCCHECK(rclc_publisher_init_default(
 		&mag_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, MagneticField),
 		"sensors/imu/mag"));
-	prepare_mag_msg();*/
+	prepare_mag_msg();
 
 	// create tick publisher
-	/*RCCHECK(rclc_publisher_init_default(
+	RCCHECK(rclc_publisher_init_default(
 		&tick_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, TickDelta),
 		"sensors/encoders/tick"));
-	prepare_tick_msg();*/	
+	prepare_tick_msg();	
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer = rcl_get_zero_initialized_timer();
