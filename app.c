@@ -142,8 +142,8 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	}
 	
 	// fill mailamsg.stamp
-	mailamsg.stamp.sec = last_call_time / (1000*1000*1000);
-	mailamsg.stamp.nanosec = last_call_time - (mailamsg.stamp.sec*(1000*1000*1000));
+	mailamsg.stamp.sec = last_call_time / RCL_MS_TO_NS(1000);
+	mailamsg.stamp.nanosec = last_call_time - (mailamsg.stamp.sec*RCL_MS_TO_NS(1000));
 
 	
 
@@ -248,7 +248,7 @@ void appMain(void * arg)
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer = rcl_get_zero_initialized_timer();
-	const unsigned int publisher_timer_timeout = 1000;
+	const unsigned int publisher_timer_timeout = 10000;
 	RCCHECK(rclc_timer_init_default(
 		&publisher_timer,
 		&support,
