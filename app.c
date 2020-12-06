@@ -210,8 +210,8 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	//read_encoders();
 
 	// tick_msg
-	tick_msg.header.stamp.sec = act_sec;
-	tick_msg.header.stamp.nanosec = act_nanosec;
+	//tick_msg.header.stamp.sec = act_sec;
+	//tick_msg.header.stamp.nanosec = act_nanosec;
 	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
 	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
 	for (int i=0; i < ENCODERS; i++) {
@@ -300,7 +300,7 @@ void appMain(void * arg)
 	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
 
 	// config imu mpu9250
-	i2c_mpu9250_init(&cal);
+	//i2c_mpu9250_init(&cal);
 	//MadgwickAHRSinit(500, 0.8); // calc orientation on the raspberry
 	
 	// create executor
@@ -311,7 +311,7 @@ void appMain(void * arg)
 	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
 	
 	while(true) {
-		read_imu();
+		//read_imu();
 		rclc_executor_spin_some(&executor, 1000000); // nanosec
 	}
 
