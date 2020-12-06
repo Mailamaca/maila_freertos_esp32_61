@@ -5,10 +5,12 @@
 
 #include <rcl/rcl.h>
 #include <rcl/error_handling.h>
-#include <maila_msgs/msg/esp32_data.h>
-
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
+
+#include <sensor_msgs/msg/imu.h>
+#include <sensor_msgs/msg/magnetic_field.h>
+#include <maila_msgs/msg/delta_tick.h>
 
 #ifdef ESP_PLATFORM
 #include "freertos/FreeRTOS.h"
@@ -38,16 +40,25 @@
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Aborting.\n",__LINE__,(int)temp_rc);vTaskDelete(NULL);}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Continuing.\n",__LINE__,(int)temp_rc);}}
 
-rcl_publisher_t publisher;
-maila_msgs__msg__Esp32Data mailamsg;
+rcl_publisher_t imu_publisher;
+sensor_msgs__msg__Imu imu_msg;
+
+rcl_publisher_t mag_publisher;
+sensor_msgs__msg__MagneticField mag_msg;
+
+rcl_publisher_t tick_publisher;
+maila_msgs__msg__DeltaTick tick_msg;
 
 #define ENCODERS 5
 int16_t prev_ticks[ENCODERS] = {};
+int16_t delta_ticks[ENCODERS] = {};
 int16_t ticks;
 
 #define IMU_N_DATA 9
 vector_t va, vg, vm;
 uint64_t imu_readings = 0;
+
+uint32_t seq;
 
 calibration_t cal = {
     .mag_offset = {.x = 25.183594, .y = 57.519531, .z = -62.648438},
@@ -135,69 +146,70 @@ int16_t getPCNTDelta(int16_t prev_value, int16_t new_value) {
 
 void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 {
+	int64_t act_time = esp_timer_get_time(); // us since start
+	int64_t act_sec = act_time / 1000000;
+	int64_t act_nanosec = (act_time - (act_sec*1000000)) * 1000;
 
 	//RCLC_UNUSED(last_call_time);
 	if (timer == NULL) {
 		return;
 	}
 	
-	// fill mailamsg.stamp
-	mailamsg.stamp.sec = last_call_time / RCL_MS_TO_NS(1000);
-	mailamsg.stamp.nanosec = last_call_time - (mailamsg.stamp.sec*RCL_MS_TO_NS(1000));
-
-	
-
 	// encoders
+	read_encoders();
+
+	// tick_msg
+	tick_msg.header.seq = seq;
+	tick_msg.header.stamp.sec = act_sec;
+	tick_msg.header.stamp.nanosec = act_nanosec;
+	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
+	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
 	for (int i=0; i < ENCODERS; i++) {
-		pcnt_get_counter_value(i, &ticks);
-		mailamsg.int_data.data[i] = getPCNTDelta(prev_ticks[i], ticks);	
-		prev_ticks[i] = ticks;
-		if (i==0) break; // TODO: remove this for updating all the encoders
+		tick_msg.ticks.data[i] = delta_ticks[i];
 	}
+	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
 
-	mailamsg.int_data.data[1] = 0;
-	mailamsg.int_data.data[2] = 0;
-	mailamsg.int_data.data[3] = 0;
-	mailamsg.int_data.data[4] = imu_readings;
+	// imu_msg
+	if (imu_readings <= 0) read_imu();
+	imu_msg.header.seq = seq;
+	imu_msg.header.stamp.sec = act_sec;
+	imu_msg.header.stamp.nanosec = act_nanosec;
+	imu_msg.angular_velocity.x = vg.x / imu_readings;
+	imu_msg.angular_velocity.y = vg.y / imu_readings;
+	imu_msg.angular_velocity.z = vg.z / imu_readings;
+	imu_msg.linear_acceleration.x = va.x / imu_readings;
+	imu_msg.linear_acceleration.y = va.y / imu_readings;
+	imu_msg.linear_acceleration.z = va.z / imu_readings;
+	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
 
+	// mag_msg
+	if (imu_readings <= 0) read_imu();
+	imu_msg.header.seq = seq;
+	imu_msg.header.stamp.sec = act_sec;
+	imu_msg.header.stamp.nanosec = act_nanosec;
+	mag_msg.magnetic_field.x = vm.x / imu_readings;
+	mag_msg.magnetic_field.y = vm.y / imu_readings;
+	mag_msg.magnetic_field.z = vm.z / imu_readings;
+	RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
 	
-	
-	// imu data
-	if (imu_readings > 0) {
-		mailamsg.float_data.data[0] = va.x / imu_readings;
-		mailamsg.float_data.data[1] = va.y / imu_readings;
-		mailamsg.float_data.data[2] = va.z / imu_readings;
-		mailamsg.float_data.data[3] = vg.x / imu_readings;
-		mailamsg.float_data.data[4] = vg.y / imu_readings;
-		mailamsg.float_data.data[5] = vg.z / imu_readings;
-		mailamsg.float_data.data[6] = vm.x / imu_readings;
-		mailamsg.float_data.data[7] = vm.y / imu_readings;
-		mailamsg.float_data.data[8] = vm.z / imu_readings;
+	// reset
+	seq++;
+	imu_readings = 0;
+	va.x = va.y = va.z = 0;
+	vg.x = vg.y = vg.z = 0;
+	vm.x = vm.y = vm.z = 0;
 
-		imu_readings = 0;
-		va.x = va.y = va.z = 0;
-		vg.x = vg.y = vg.z = 0;
-		vm.x = vm.y = vm.z = 0;
-	}	
-
-	// send msg
-	RCSOFTCHECK(rcl_publish(&publisher, &mailamsg, NULL));
 }
 
-void imu_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
+void read_imu()
 {
-
-	//RCLC_UNUSED(last_call_time);
-	if (timer == NULL) {
-		return;
-	}
 
 	vector_t _va, _vg, _vm;
 
 	// Get the Accelerometer, Gyroscope and Magnetometer values.
-    	ESP_ERROR_CHECK(get_accel_gyro_mag(&_va, &_vg, &_vm));
+	ESP_ERROR_CHECK(get_accel_gyro_mag(&_va, &_vg, &_vm));
 	//ESP_ERROR_CHECK(get_accel_gyro(&_va, &_vg));
-		
+			
 	// Transform these values to the orientation of our device.
 	transform_accel_gyro(&_va);
 	transform_accel_gyro(&_vg);
@@ -216,6 +228,52 @@ void imu_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 
 }
 
+void read_encoders()
+{
+	int16_t ticks;
+	for (int i=0; i < ENCODERS; i++) {
+		pcnt_get_counter_value(i, &ticks);
+		delta_ticks[i] = getPCNTDelta(prev_ticks[i], ticks);	
+		prev_ticks[i] = ticks;
+		if (i==0) break; // TODO: remove this for updating all the encoders ****
+	}
+	delta_ticks[4] = imu_readings; // debug**********************
+}
+
+void prepare_imu_msg()
+{
+
+	imu_msg.orientation_covariance.data = (double *)calloc(9, sizeof(double));
+	imu_msg.orientation_covariance.capacity = 9;
+	imu_msg.orientation_covariance.size = 9;
+
+	imu_msg.angular_velocity_covariance.data = (double *)calloc(9, sizeof(double));
+	imu_msg.angular_velocity_covariance.capacity = 9;
+	imu_msg.angular_velocity_covariance.size = 9;
+
+	imu_msg.linear_acceleration_covariance.data = (double *)calloc(9, sizeof(double));
+	imu_msg.linear_acceleration_covariance.capacity = 9;
+	imu_msg.linear_acceleration_covariance.size = 9;
+
+}
+
+void prepare_mag_msg()
+{
+
+	mag_msg.magnetic_field_covariance.data = (double *)calloc(9, sizeof(double));
+	mag_msg.magnetic_field_covariance.capacity = 9;
+	mag_msg.magnetic_field_covariance.size = 9;
+
+}
+
+void prepare_tick_msg()
+{
+
+	tick_msg.ticks.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
+	tick_msg.ticks.capacity = ENCODERS;
+	tick_msg.ticks.size = ENCODERS;
+
+}
 
 
 void appMain(void * arg)
@@ -230,41 +288,38 @@ void appMain(void * arg)
 	rcl_node_t node;
 	RCCHECK(rclc_node_init_default(&node, "maila_freertos_esp32_61", "", &support));
 
-	// create publisher
+	// create imu publisher
 	RCCHECK(rclc_publisher_init_default(
-		&publisher,
+		&imu_publisher,
 		&node,
-		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, Esp32Data),
-		"maila_freertos_esp32_61"));
+		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+		"sensors/imu/data_raw"));
+	prepare_imu_msg();
 
-	// prepare mailamsg.int_data
-	mailamsg.int_data.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
-	mailamsg.int_data.capacity = ENCODERS;
-	mailamsg.int_data.size = ENCODERS;
-	// prepare mailamsg.float_data
-	mailamsg.float_data.data = (float *)calloc(IMU_N_DATA, sizeof(float));
-	mailamsg.float_data.capacity = IMU_N_DATA;
-	mailamsg.float_data.size = IMU_N_DATA;
+	// create mag publisher
+	RCCHECK(rclc_publisher_init_default(
+		&mag_publisher,
+		&node,
+		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, MagneticField),
+		"sensors/imu/mag"));
+	prepare_mag_msg();
+
+	// create tick publisher
+	RCCHECK(rclc_publisher_init_default(
+		&tick_publisher,
+		&node,
+		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, TickDelta),
+		"sensors/encoders/tick"));
+	prepare_tick_msg();	
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer = rcl_get_zero_initialized_timer();
-	const unsigned int publisher_timer_timeout = 10000;
+	const unsigned int publisher_timer_timeout = 1000;
 	RCCHECK(rclc_timer_init_default(
 		&publisher_timer,
 		&support,
 		RCL_MS_TO_NS(publisher_timer_timeout),
-		publisher_timer_callback));
-
-	
-	// create imu_timer
-	/*rcl_timer_t imu_timer = rcl_get_zero_initialized_timer();
-	const unsigned int imu_timer_timeout = 1;
-	RCCHECK(rclc_timer_init_default(
-		&imu_timer,
-		&support,
-		RCL_MS_TO_NS(imu_timer_timeout),
-		imu_timer_callback));*/
-	
+		publisher_timer_callback));	
 
 	// config pcnt
 	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
@@ -278,41 +333,12 @@ void appMain(void * arg)
 	executor = rclc_executor_get_zero_initialized_executor();
 	unsigned int num_handles = 1 + 0; //n_timers + n_subscriptions;
 	RCCHECK(rclc_executor_init(&executor, &support.context, num_handles, &allocator));
-	//RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
 	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
-
-	vector_t _va, _vg, _vm;
-	while(1){
-
-		//rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
-		rclc_executor_spin_some(&executor, 1000);	
-
-		// Get the Accelerometer, Gyroscope and Magnetometer values.
-		ESP_ERROR_CHECK(get_accel_gyro_mag(&_va, &_vg, &_vm));
-		//ESP_ERROR_CHECK(get_accel_gyro(&_va, &_vg));
-			
-		// Transform these values to the orientation of our device.
-		transform_accel_gyro(&_va);
-		transform_accel_gyro(&_vg);
-		transform_mag(&_vm);
-
-		va.x += _va.x;
-		va.y += _va.y;
-		va.z += _va.z;
-		vg.x += _vg.x;
-		vg.y += _vg.y;
-		vg.z += _vg.z;
-		vm.x += _vm.x;
-		vm.y += _vm.y;
-		vm.z += _vm.z;
-		imu_readings++;
-
-
-		//usleep(100000);
+	
+	while(true) {
+		read_imu();
+		rclc_executor_spin_some(&executor, 1000); // nanosec
 	}
-
-	// spin forever
-	rclc_executor_spin(&executor);
 
 	// free resources
 	RCCHECK(rcl_publisher_fini(&publisher, &node))
