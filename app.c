@@ -257,13 +257,13 @@ void appMain(void * arg)
 
 	
 	// create imu_timer
-	rcl_timer_t imu_timer = rcl_get_zero_initialized_timer();
+	/*rcl_timer_t imu_timer = rcl_get_zero_initialized_timer();
 	const unsigned int imu_timer_timeout = 1;
 	RCCHECK(rclc_timer_init_default(
 		&imu_timer,
 		&support,
 		RCL_MS_TO_NS(imu_timer_timeout),
-		imu_timer_callback));
+		imu_timer_callback));*/
 	
 
 	// config pcnt
@@ -276,15 +276,40 @@ void appMain(void * arg)
 	// create executor
 	rclc_executor_t executor;
 	executor = rclc_executor_get_zero_initialized_executor();
-	unsigned int num_handles = 2 + 0; //n_timers + n_subscriptions;
+	unsigned int num_handles = 1 + 0; //n_timers + n_subscriptions;
 	RCCHECK(rclc_executor_init(&executor, &support.context, num_handles, &allocator));
-	RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
+	//RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
 	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
 
-	/*while(1){
-		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+	vector_t _va, _vg, _vm;
+	while(1){
+
+		//rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+		rclc_executor_spin_some(&executor, 1000);	
+
+		// Get the Accelerometer, Gyroscope and Magnetometer values.
+		ESP_ERROR_CHECK(get_accel_gyro_mag(&_va, &_vg, &_vm));
+		//ESP_ERROR_CHECK(get_accel_gyro(&_va, &_vg));
+			
+		// Transform these values to the orientation of our device.
+		transform_accel_gyro(&_va);
+		transform_accel_gyro(&_vg);
+		transform_mag(&_vm);
+
+		va.x += _va.x;
+		va.y += _va.y;
+		va.z += _va.z;
+		vg.x += _vg.x;
+		vg.y += _vg.y;
+		vg.z += _vg.z;
+		vm.x += _vm.x;
+		vm.y += _vm.y;
+		vm.z += _vm.z;
+		imu_readings++;
+
+
 		//usleep(100000);
-	}*/
+	}
 
 	// spin forever
 	rclc_executor_spin(&executor);
