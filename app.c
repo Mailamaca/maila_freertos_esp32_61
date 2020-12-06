@@ -238,7 +238,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	imu_msg.linear_acceleration.x = va.x / imu_readings;
 	imu_msg.linear_acceleration.y = va.y / imu_readings;
 	imu_msg.linear_acceleration.z = va.z / imu_readings;
-	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
+	//RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
 
 	// mag_msg
 	mag_msg.header.stamp.sec = act_sec;
@@ -246,7 +246,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mag_msg.magnetic_field.x = vm.x / imu_readings;
 	mag_msg.magnetic_field.y = vm.y / imu_readings;
 	mag_msg.magnetic_field.z = vm.z / imu_readings;
-	RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
+	//RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
 	
 	// reset
 	imu_readings = 0;
@@ -270,7 +270,7 @@ void appMain(void * arg)
 	RCCHECK(rclc_node_init_default(&node, "maila_freertos_esp32_61", "", &support));
 
 	// create imu publisher
-	RCCHECK(rclc_publisher_init_default(
+	/*RCCHECK(rclc_publisher_init_default(
 		&imu_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
@@ -283,7 +283,7 @@ void appMain(void * arg)
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, MagneticField),
 		"sensors/imu/mag"));
-	prepare_mag_msg();
+	prepare_mag_msg();*/
 
 	// create tick publisher
 	RCCHECK(rclc_publisher_init_default(
@@ -322,8 +322,8 @@ void appMain(void * arg)
 	}
 
 	// free resources
-	RCCHECK(rcl_publisher_fini(&imu_publisher, &node))
-	RCCHECK(rcl_publisher_fini(&mag_publisher, &node))
+	//RCCHECK(rcl_publisher_fini(&imu_publisher, &node))
+	//RCCHECK(rcl_publisher_fini(&mag_publisher, &node))
 	RCCHECK(rcl_publisher_fini(&tick_publisher, &node))
 	RCCHECK(rcl_node_fini(&node))
 
