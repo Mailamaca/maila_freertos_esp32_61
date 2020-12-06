@@ -10,7 +10,7 @@
 
 #include <sensor_msgs/msg/imu.h>
 #include <sensor_msgs/msg/magnetic_field.h>
-#include <maila_msgs/msg/delta_tick.h>
+#include <maila_msgs/msg/tick_delta.h>
 
 #ifdef ESP_PLATFORM
 #include "freertos/FreeRTOS.h"
@@ -47,7 +47,7 @@ rcl_publisher_t mag_publisher;
 sensor_msgs__msg__MagneticField mag_msg;
 
 rcl_publisher_t tick_publisher;
-maila_msgs__msg__DeltaTick tick_msg;
+maila_msgs__msg__TickDelta tick_msg;
 
 #define ENCODERS 5
 int16_t prev_ticks[ENCODERS] = {};
