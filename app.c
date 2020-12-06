@@ -58,7 +58,6 @@ int16_t ticks;
 vector_t va, vg, vm;
 uint64_t imu_readings = 0;
 
-uint32_t seq;
 
 calibration_t cal = {
     .mag_offset = {.x = 25.183594, .y = 57.519531, .z = -62.648438},
@@ -186,26 +185,10 @@ void read_encoders()
 void prepare_imu_msg()
 {
 
-	imu_msg.orientation_covariance.data = (double *)calloc(9, sizeof(double));
-	imu_msg.orientation_covariance.capacity = 9;
-	imu_msg.orientation_covariance.size = 9;
-
-	imu_msg.angular_velocity_covariance.data = (double *)calloc(9, sizeof(double));
-	imu_msg.angular_velocity_covariance.capacity = 9;
-	imu_msg.angular_velocity_covariance.size = 9;
-
-	imu_msg.linear_acceleration_covariance.data = (double *)calloc(9, sizeof(double));
-	imu_msg.linear_acceleration_covariance.capacity = 9;
-	imu_msg.linear_acceleration_covariance.size = 9;
-
 }
 
 void prepare_mag_msg()
 {
-
-	mag_msg.magnetic_field_covariance.data = (double *)calloc(9, sizeof(double));
-	mag_msg.magnetic_field_covariance.capacity = 9;
-	mag_msg.magnetic_field_covariance.size = 9;
 
 }
 
@@ -233,7 +216,6 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	read_encoders();
 
 	// tick_msg
-	tick_msg.header.seq = seq;
 	tick_msg.header.stamp.sec = act_sec;
 	tick_msg.header.stamp.nanosec = act_nanosec;
 	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
@@ -245,7 +227,6 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 
 	// imu_msg
 	if (imu_readings <= 0) read_imu();
-	imu_msg.header.seq = seq;
 	imu_msg.header.stamp.sec = act_sec;
 	imu_msg.header.stamp.nanosec = act_nanosec;
 	imu_msg.angular_velocity.x = vg.x / imu_readings;
@@ -258,7 +239,6 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 
 	// mag_msg
 	if (imu_readings <= 0) read_imu();
-	imu_msg.header.seq = seq;
 	imu_msg.header.stamp.sec = act_sec;
 	imu_msg.header.stamp.nanosec = act_nanosec;
 	mag_msg.magnetic_field.x = vm.x / imu_readings;
@@ -267,7 +247,6 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
 	
 	// reset
-	seq++;
 	imu_readings = 0;
 	va.x = va.y = va.z = 0;
 	vg.x = vg.y = vg.z = 0;
