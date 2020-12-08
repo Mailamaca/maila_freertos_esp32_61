@@ -271,12 +271,12 @@ void appMain(void * arg)
 	RCCHECK(rclc_node_init_default(&node, "maila_freertos_esp32_61", "", &support));
 
 	// create imu publisher
-	/*RCCHECK(rclc_publisher_init_default(
+	RCCHECK(rclc_publisher_init_default(
 		&imu_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
 		"sensors/imu/data_raw"));
-	prepare_imu_msg();*/
+	prepare_imu_msg();
 
 	// create mag publisher
 	RCCHECK(rclc_publisher_init_default(
