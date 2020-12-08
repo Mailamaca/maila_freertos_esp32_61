@@ -8,9 +8,9 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 
-//#include <sensor_msgs/msg/imu.h>
+#include <sensor_msgs/msg/imu.h>
 //#include <sensor_msgs/msg/magnetic_field.h>
-#include <maila_msgs/msg/tick_delta.h>
+//#include <maila_msgs/msg/tick_delta.h>
 
 #ifdef ESP_PLATFORM
 #include "freertos/FreeRTOS.h"
@@ -40,14 +40,14 @@
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Aborting.\n",__LINE__,(int)temp_rc);vTaskDelete(NULL);}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Continuing.\n",__LINE__,(int)temp_rc);}}
 
-//rcl_publisher_t imu_publisher;
-//sensor_msgs__msg__Imu imu_msg;
+rcl_publisher_t imu_publisher;
+sensor_msgs__msg__Imu imu_msg;
 
 //rcl_publisher_t mag_publisher;
 //sensor_msgs__msg__MagneticField mag_msg;
 
-rcl_publisher_t tick_publisher;
-maila_msgs__msg__TickDelta tick_msg;
+//rcl_publisher_t tick_publisher;
+//maila_msgs__msg__TickDelta tick_msg;
 
 #define ENCODERS 5
 int16_t prev_ticks[ENCODERS] = {};
@@ -189,6 +189,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	// encoders
 	//read_encoders();
 
+/*
 	// tick_msg
 	tick_msg.header.stamp.sec = 10; //act_sec;
 	tick_msg.header.stamp.nanosec = 100; //act_nanosec;
@@ -198,20 +199,21 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 		tick_msg.ticks.data[i] = 10; //delta_ticks[i];
 	}
 	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
-
-	/*
+*/
+	
 	// imu_msg
 	if (imu_readings <= 0) read_imu();
-	imu_msg.header.stamp.sec = act_sec;
-	imu_msg.header.stamp.nanosec = act_nanosec;
-	imu_msg.angular_velocity.x = vg.x / imu_readings;
-	imu_msg.angular_velocity.y = vg.y / imu_readings;
-	imu_msg.angular_velocity.z = vg.z / imu_readings;
-	imu_msg.linear_acceleration.x = va.x / imu_readings;
-	imu_msg.linear_acceleration.y = va.y / imu_readings;
-	imu_msg.linear_acceleration.z = va.z / imu_readings;
-	//RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
+	imu_msg.header.stamp.sec = 10; //act_sec;
+	imu_msg.header.stamp.nanosec = 10; //act_nanosec;
+	imu_msg.angular_velocity.x = 10; //vg.x / imu_readings;
+	imu_msg.angular_velocity.y = 10; //vg.y / imu_readings;
+	imu_msg.angular_velocity.z = 10; //vg.z / imu_readings;
+	imu_msg.linear_acceleration.x = 10; //va.x / imu_readings;
+	imu_msg.linear_acceleration.y = 10; //va.y / imu_readings;
+	imu_msg.linear_acceleration.z = 10; //va.z / imu_readings;
+	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
 
+/*
 	// mag_msg
 	imu_msg.header.stamp.sec = act_sec;
 	imu_msg.header.stamp.nanosec = act_nanosec;
@@ -241,13 +243,21 @@ void appMain(void * arg)
 	rcl_node_t node;
 	RCCHECK(rclc_node_init_default(&node, "maila_freertos_esp32_61", "", &support));
 
-	// create tick publisher
+/*	// create tick publisher
 	RCCHECK(rclc_publisher_init_default(
 		&tick_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, TickDelta),
 		"sensors/encoders/tick"));
 	prepare_tick_msg();	
+*/
+	// create imu publisher
+	RCCHECK(rclc_publisher_init_default(
+		&imu_publisher,
+		&node,
+		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+		"sensors/imu/data_raw"));
+	prepare_imu_msg();
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer = rcl_get_zero_initialized_timer();
@@ -278,7 +288,7 @@ void appMain(void * arg)
 	}
 
 	// free resources
-	RCCHECK(rcl_publisher_fini(&tick_publisher, &node))
+	RCCHECK(rcl_publisher_fini(&imu_publisher, &node))
 	RCCHECK(rcl_node_fini(&node))
 
   	vTaskDelete(NULL);
