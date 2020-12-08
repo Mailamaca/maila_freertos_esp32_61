@@ -73,6 +73,7 @@ void appMain(void * arg)
 
 	//msg.data = 0;
 	msg.stamp.sec++;
+	msg.frame_id = "pippo";
 
 	while(1){
 		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
