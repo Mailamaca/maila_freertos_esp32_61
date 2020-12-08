@@ -166,13 +166,14 @@ void read_encoders()
 	delta_ticks[4] = imu_readings; // debug**********************
 }
 
+/*
 void prepare_tick_msg()
 {
 	tick_msg.ticks.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
 	tick_msg.ticks.capacity = ENCODERS;
 	tick_msg.ticks.size = ENCODERS;
 }
-
+*/
 
 
 void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
@@ -202,7 +203,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 */
 	
 	// imu_msg
-	if (imu_readings <= 0) read_imu();
+	//if (imu_readings <= 0) read_imu();
 	imu_msg.header.stamp.sec = 10; //act_sec;
 	imu_msg.header.stamp.nanosec = 10; //act_nanosec;
 	imu_msg.angular_velocity.x = 10; //vg.x / imu_readings;
@@ -257,7 +258,6 @@ void appMain(void * arg)
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
 		"sensors/imu/data_raw"));
-	prepare_imu_msg();
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer = rcl_get_zero_initialized_timer();
