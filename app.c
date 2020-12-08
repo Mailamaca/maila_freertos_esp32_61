@@ -54,11 +54,15 @@ int16_t prev_ticks[ENCODERS] = {};
 int16_t delta_ticks[ENCODERS] = {};
 
 vector_t va, vg, vm;
+const float G = 9.807f;
+const float _d2r = 3.14159265359f/180.0f;
 uint64_t imu_readings = 0;
 
 #define FRAME_ID_STRING_LEN 20
 const char imu_frame_id[] = "imu";
 const char tick_frame_id[] = "encoder";
+
+const unsigned int publisher_timer_timeout = 10; // ms
 
 calibration_t cal = {
     .mag_offset = {.x = 25.183594, .y = 57.519531, .z = -62.648438},
@@ -71,15 +75,26 @@ calibration_t cal = {
 };
 
 
-void transform_accel_gyro(vector_t *v)
+void transform_accel(vector_t *v)
 {
   float x = v->x;
   float y = v->y;
   float z = v->z;
 
-  v->x = -x;
-  v->y = -z;
-  v->z = -y;
+  v->x = x * G;
+  v->y = y * G;
+  v->z = z * G;
+}
+
+void transform_gyro(vector_t *v)
+{
+  float x = v->x;
+  float y = v->y;
+  float z = v->z;
+
+  v->x = x * _d2r;
+  v->y = y * _d2r;
+  v->z = z * _d2r;
 }
 
 void transform_mag(vector_t *v)
@@ -88,9 +103,9 @@ void transform_mag(vector_t *v)
   float y = v->y;
   float z = v->z;
 
-  v->x = -y;
-  v->y = z;
-  v->z = -x;
+  v->x = y;
+  v->y = x;
+  v->z = -z;
 }
 
 void setPCNTParams(int pinPulse,
@@ -143,8 +158,8 @@ void read_imu()
 	//ESP_ERROR_CHECK(get_accel_gyro(&_va, &_vg));
 			
 	// Transform these values to the orientation of our device.
-	transform_accel_gyro(&_va);
-	transform_accel_gyro(&_vg);
+	transform_accel(&_va);
+	transform_gyro(&_vg);
 	transform_mag(&_vm);
 
 	va.x += _va.x;
@@ -241,7 +256,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	imu_msg.linear_acceleration.x = va.x / imu_readings;
 	imu_msg.linear_acceleration.y = va.y / imu_readings;
 	imu_msg.linear_acceleration.z = va.z / imu_readings;
-	//RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
+	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
 
 	// mag_msg
 	mag_msg.header.stamp.sec = act_sec;
@@ -296,7 +311,6 @@ void appMain(void * arg)
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer = rcl_get_zero_initialized_timer();
-	const unsigned int publisher_timer_timeout = 1000;
 	RCCHECK(rclc_timer_init_default(
 		&publisher_timer,
 		&support,
@@ -312,7 +326,7 @@ void appMain(void * arg)
 	
 	// create executor
 	rclc_executor_t executor;
-	unsigned int num_handles = 3 + 0; //n_timers + n_subscriptions;
+	unsigned int num_handles = 1 + 0; //n_timers + n_subscriptions;
 	RCCHECK(rclc_executor_init(&executor, &support.context, num_handles, &allocator));
 	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
 	
