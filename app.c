@@ -277,6 +277,7 @@ void appMain(void * arg)
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
 		"sensors/imu/data_raw"));
 	prepare_imu_msg();
+	rclc_executor_spin_some(&executor, 1000); // nanosec
 
 	// create mag publisher
 	RCCHECK(rclc_publisher_init_default(
@@ -293,6 +294,7 @@ void appMain(void * arg)
 		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, TickDelta),
 		"sensors/encoders/tick"));
 	prepare_tick_msg();	
+	rclc_executor_spin_some(&executor, 1000); // nanosec
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer = rcl_get_zero_initialized_timer();
@@ -302,6 +304,7 @@ void appMain(void * arg)
 		&support,
 		RCL_MS_TO_NS(publisher_timer_timeout),
 		publisher_timer_callback));	
+	rclc_executor_spin_some(&executor, 1000); // nanosec
 
 	// config pcnt
 	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
