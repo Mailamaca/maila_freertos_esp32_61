@@ -201,7 +201,7 @@ void prepare_tick_msg()
 	sprintf(tick_msg.header.frame_id.data, "tick");
 	tick_msg.header.frame_id.size = strlen(tick_msg.header.frame_id.data);
 
-	tick_msg.ticks.data = (int16_t *) malloc(ENCODERS, sizeof(int16_t));
+	tick_msg.ticks.data = (int16_t *) malloc(ENCODERS * sizeof(int16_t));
 	tick_msg.ticks.capacity = ENCODERS;
 	tick_msg.ticks.size = ENCODERS;
 }
