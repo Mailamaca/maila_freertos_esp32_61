@@ -169,6 +169,9 @@ void read_encoders()
 		prev_ticks[i] = ticks;
 		if (i==0) break; // TODO: remove this for updating all the encoders ****
 	}
+	delta_ticks[1] = imu_readings; // debug**********************
+	delta_ticks[2] = imu_readings; // debug**********************
+	delta_ticks[3] = imu_readings; // debug**********************
 	delta_ticks[4] = imu_readings; // debug**********************
 }
 
@@ -198,7 +201,7 @@ void prepare_tick_msg()
 	sprintf(tick_msg.header.frame_id.data, "tick");
 	tick_msg.header.frame_id.size = strlen(tick_msg.header.frame_id.data);
 
-	tick_msg.ticks.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
+	tick_msg.ticks.data = (int16_t *) malloc(ENCODERS, sizeof(int16_t));
 	tick_msg.ticks.capacity = ENCODERS;
 	tick_msg.ticks.size = ENCODERS;
 }
@@ -241,8 +244,8 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
 
 	// mag_msg
-	imu_msg.header.stamp.sec = act_sec;
-	imu_msg.header.stamp.nanosec = act_nanosec;
+	mag_msg.header.stamp.sec = act_sec;
+	mag_msg.header.stamp.nanosec = act_nanosec;
 	mag_msg.magnetic_field.x = vm.x / imu_readings;
 	mag_msg.magnetic_field.y = vm.y / imu_readings;
 	mag_msg.magnetic_field.z = vm.z / imu_readings;
