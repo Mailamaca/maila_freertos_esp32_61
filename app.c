@@ -8,8 +8,8 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 
-#include <sensor_msgs/msg/imu.h>
-#include <sensor_msgs/msg/magnetic_field.h>
+//#include <sensor_msgs/msg/imu.h>
+//#include <sensor_msgs/msg/magnetic_field.h>
 #include <maila_msgs/msg/tick_delta.h>
 
 #ifdef ESP_PLATFORM
@@ -40,11 +40,11 @@
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Aborting.\n",__LINE__,(int)temp_rc);vTaskDelete(NULL);}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Continuing.\n",__LINE__,(int)temp_rc);}}
 
-rcl_publisher_t imu_publisher;
-sensor_msgs__msg__Imu imu_msg;
+//rcl_publisher_t imu_publisher;
+//sensor_msgs__msg__Imu imu_msg;
 
-rcl_publisher_t mag_publisher;
-sensor_msgs__msg__MagneticField mag_msg;
+//rcl_publisher_t mag_publisher;
+//sensor_msgs__msg__MagneticField mag_msg;
 
 rcl_publisher_t tick_publisher;
 maila_msgs__msg__TickDelta tick_msg;
@@ -54,10 +54,10 @@ int16_t prev_ticks[ENCODERS] = {};
 int16_t delta_ticks[ENCODERS] = {};
 int16_t ticks;
 
-vector_t va, vg, vm;
-uint64_t imu_readings = 0;
+//vector_t va, vg, vm;
+//uint64_t imu_readings = 0;
 
-calibration_t cal = {
+/*calibration_t cal = {
     .mag_offset = {.x = 25.183594, .y = 57.519531, .z = -62.648438},
     .mag_scale = {.x = 1.513449, .y = 1.557811, .z = 1.434039},
     .accel_offset = {.x = 0.020900, .y = 0.014688, .z = -0.002580},
@@ -65,16 +65,9 @@ calibration_t cal = {
     .accel_scale_hi = {.x = 1.013558, .y = 1.011903, .z = 1.019645},
 
     .gyro_bias_offset = {.x = 0.303956, .y = -1.049768, .z = -0.403782}};
+*/
 
-
-/**
- * Transformation:
- *  - Rotate around Z axis 180 degrees
- *  - Rotate around X axis -90 degrees
- * @param  {object} s {x,y,z} sensor
- * @return {object}   {x,y,z} transformed
- */
-static void transform_accel_gyro(vector_t *v)
+void transform_accel_gyro(vector_t *v)
 {
   float x = v->x;
   float y = v->y;
@@ -85,12 +78,7 @@ static void transform_accel_gyro(vector_t *v)
   v->z = -y;
 }
 
-/**
- * Transformation: to get magnetometer aligned
- * @param  {object} s {x,y,z} sensor
- * @return {object}   {x,y,z} transformed
- */
-static void transform_mag(vector_t *v)
+void transform_mag(vector_t *v)
 {
   float x = v->x;
   float y = v->y;
@@ -140,6 +128,7 @@ int16_t getPCNTDelta(int16_t prev_value, int16_t new_value)
 	}
 }
 
+/*
 void read_imu()
 {
 	vector_t _va, _vg, _vm;
@@ -163,7 +152,7 @@ void read_imu()
 	vm.y += _vm.y;
 	vm.z += _vm.z;
 	imu_readings++;
-}
+}*/
 
 void read_encoders()
 {
@@ -177,14 +166,6 @@ void read_encoders()
 	delta_ticks[4] = imu_readings; // debug**********************
 }
 
-void prepare_imu_msg()
-{
-}
-
-void prepare_mag_msg()
-{
-}
-
 void prepare_tick_msg()
 {
 	tick_msg.ticks.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
@@ -196,9 +177,9 @@ void prepare_tick_msg()
 
 void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 {
-	int64_t act_time = esp_timer_get_time(); // us since start
-	int64_t act_sec = act_time / 1000000;
-	int64_t act_nanosec = (act_time - (act_sec*1000000)) * 1000;
+	//int64_t act_time = esp_timer_get_time(); // us since start
+	//int64_t act_sec = act_time / 1000000;
+	//int64_t act_nanosec = (act_time - (act_sec*1000000)) * 1000;
 
 	//RCLC_UNUSED(last_call_time);
 	if (timer == NULL) {
@@ -206,18 +187,19 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	}
 	
 	// encoders
-	read_encoders();
+	//read_encoders();
 
 	// tick_msg
-	tick_msg.header.stamp.sec = act_sec;
-	tick_msg.header.stamp.nanosec = act_nanosec;
-	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
-	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
+	tick_msg.header.stamp.sec = 10; //act_sec;
+	tick_msg.header.stamp.nanosec = 100; //act_nanosec;
+	tick_msg.delta.sec = 10; //last_call_time / RCL_MS_TO_NS(1000);
+	tick_msg.delta.nanosec = 10; //last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
 	for (int i=0; i < ENCODERS; i++) {
-		tick_msg.ticks.data[i] = delta_ticks[i];
+		tick_msg.ticks.data[i] = 10; //delta_ticks[i];
 	}
 	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
 
+	/*
 	// imu_msg
 	if (imu_readings <= 0) read_imu();
 	imu_msg.header.stamp.sec = act_sec;
@@ -243,7 +225,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	va.x = va.y = va.z = 0;
 	vg.x = vg.y = vg.z = 0;
 	vm.x = vm.y = vm.z = 0;
-
+*/
 }
 
 
@@ -296,8 +278,6 @@ void appMain(void * arg)
 	}
 
 	// free resources
-	//RCCHECK(rcl_publisher_fini(&imu_publisher, &node))
-	//RCCHECK(rcl_publisher_fini(&mag_publisher, &node))
 	RCCHECK(rcl_publisher_fini(&tick_publisher, &node))
 	RCCHECK(rcl_node_fini(&node))
 
