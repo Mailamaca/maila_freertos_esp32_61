@@ -226,6 +226,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 		tick_msg.ticks.data[i] = delta_ticks[i];
 	}
 	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
+	prepare_tick_msg();
 
 	// imu_msg
 	if (imu_readings <= 0) read_imu();
@@ -238,6 +239,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	imu_msg.linear_acceleration.y = va.y / imu_readings;
 	imu_msg.linear_acceleration.z = va.z / imu_readings;
 	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
+	prepare_imu_msg();
 
 	// mag_msg
 	if (imu_readings <= 0) read_imu();
@@ -247,6 +249,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mag_msg.magnetic_field.y = vm.y / imu_readings;
 	mag_msg.magnetic_field.z = vm.z / imu_readings;
 	RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
+	prepare_mag_msg();
 	
 	// reset
 	imu_readings = 0;
