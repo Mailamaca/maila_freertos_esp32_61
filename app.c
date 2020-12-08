@@ -208,7 +208,7 @@ void prepare_tick_msg()
 
 void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 {
-	int64_t act_time = 10; //esp_timer_get_time(); // us since start
+	int64_t act_time = esp_timer_get_time(); // us since start
 	int64_t act_sec = act_time / 1000000;
 	int64_t act_nanosec = (act_time - (act_sec*1000000)) * 1000;
 
@@ -226,7 +226,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
 	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
 	for (int i=0; i < ENCODERS; i++) {
-		tick_msg.ticks.data[i] = i; //delta_ticks[i];
+		tick_msg.ticks.data[i] = delta_ticks[i];
 	}
 	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
 
