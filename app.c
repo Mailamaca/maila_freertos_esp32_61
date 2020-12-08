@@ -7,6 +7,7 @@
 
 #include <maila_msgs/msg/tick_delta.h>
 #include <sensor_msgs/msg/imu.h>
+#include <maila_msgs/msg/esp32_data.h>
 
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
@@ -22,7 +23,8 @@
 rcl_publisher_t publisher;
 //std_msgs__msg__Int32 msg;
 //maila_msgs__msg__TickDelta msg;
-sensor_msgs__msg__Imu msg;
+//sensor_msgs__msg__Imu msg;
+maila_msgs__msg__Esp32Data msg;
 
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 {
@@ -30,7 +32,7 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	if (timer != NULL) {
 		RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
 		//msg.data++;
-		msg.header.stamp.sec++;
+		msg.stamp.sec++;
 	}
 }
 
@@ -50,7 +52,7 @@ void appMain(void * arg)
 	RCCHECK(rclc_publisher_init_default(
 		&publisher,
 		&node,
-		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, Esp32Data),
 		"freertos_int32_publisher"));
 
 	// create timer,
@@ -68,7 +70,7 @@ void appMain(void * arg)
 	RCCHECK(rclc_executor_add_timer(&executor, &timer));
 
 	//msg.data = 0;
-	msg.header.stamp.sec++;
+	msg.stamp.sec++;
 
 	while(1){
 		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
