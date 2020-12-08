@@ -73,7 +73,13 @@ void appMain(void * arg)
 
 	//msg.data = 0;
 	msg.stamp.sec++;
-	msg.frame_id = "pippo";
+
+	// Fill the array with a known sequence
+	msg.frame_id.data = (char * ) malloc(ARRAY_LEN * sizeof(char));
+	msg.frame_id.size = 0;
+	msg.frame_id.capacity = ARRAY_LEN;
+	sprintf(msg.frame_id.data, "pippo");
+	msg.frame_id.size = strlen(msg.frame_id.data);
 
 	while(1){
 		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
