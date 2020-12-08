@@ -218,18 +218,18 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	read_encoders();
 
 	// tick_msg
-	tick_msg.header.stamp.sec = act_sec;
+	/*tick_msg.header.stamp.sec = act_sec;
 	tick_msg.header.stamp.nanosec = act_nanosec;
 	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
 	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
 	for (int i=0; i < ENCODERS; i++) {
 		tick_msg.ticks.data[i] = delta_ticks[i];
 	}
-	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
-	prepare_tick_msg();
+	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));*/
+
+	if (imu_readings <= 0) read_imu();
 
 	// imu_msg
-	if (imu_readings <= 0) read_imu();
 	imu_msg.header.stamp.sec = act_sec;
 	imu_msg.header.stamp.nanosec = act_nanosec;
 	imu_msg.angular_velocity.x = vg.x / imu_readings;
@@ -239,17 +239,14 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	imu_msg.linear_acceleration.y = va.y / imu_readings;
 	imu_msg.linear_acceleration.z = va.z / imu_readings;
 	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
-	prepare_imu_msg();
 
 	// mag_msg
-	if (imu_readings <= 0) read_imu();
-	imu_msg.header.stamp.sec = act_sec;
+	/*imu_msg.header.stamp.sec = act_sec;
 	imu_msg.header.stamp.nanosec = act_nanosec;
 	mag_msg.magnetic_field.x = vm.x / imu_readings;
 	mag_msg.magnetic_field.y = vm.y / imu_readings;
 	mag_msg.magnetic_field.z = vm.z / imu_readings;
-	RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
-	prepare_mag_msg();
+	RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));*/
 	
 	// reset
 	imu_readings = 0;
