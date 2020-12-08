@@ -48,7 +48,7 @@ void appMain(void * arg)
 	RCCHECK(rclc_publisher_init_default(
 		&publisher,
 		&node,
-		ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, TickDelta),
 		"freertos_int32_publisher"));
 
 	// create timer,
