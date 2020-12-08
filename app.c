@@ -299,7 +299,7 @@ void appMain(void * arg)
 		&imu_publisher_timer,
 		&support,
 		RCL_MS_TO_NS(imu_publisher_timer_timeout),
-		imu_publisher_timer_callback));	
+		imu_timer_callback));	
 
 	// config imu mpu9250
 	i2c_mpu9250_init(&cal);
@@ -332,7 +332,7 @@ void appMain(void * arg)
 		&tick_publisher_timer,
 		&support,
 		RCL_MS_TO_NS(tick_publisher_timer_timeout),
-		tick_publisher_timer_callback));	
+		tick_timer_callback));	
 
 	// config pcnt
 	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
