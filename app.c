@@ -221,14 +221,14 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	read_encoders();
 
 	// tick_msg
-	/*tick_msg.header.stamp.sec = act_sec;
+	tick_msg.header.stamp.sec = act_sec;
 	tick_msg.header.stamp.nanosec = act_nanosec;
 	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
 	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
 	for (int i=0; i < ENCODERS; i++) {
 		tick_msg.ticks.data[i] = delta_ticks[i];
 	}
-	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));*/
+	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
 
 	if (imu_readings <= 0) read_imu();
 
@@ -287,11 +287,11 @@ void appMain(void * arg)
 	prepare_mag_msg();
 
 	// create tick publisher
-	/*RCCHECK(rclc_publisher_init_default(
+	RCCHECK(rclc_publisher_init_default(
 		&tick_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, TickDelta),
-		"sensors/encoders/tick"));*/
+		"sensors/encoders/tick"));
 	prepare_tick_msg();	
 
 	// create publisher_timer
