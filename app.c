@@ -11,6 +11,7 @@
 #include <sensor_msgs/msg/imu.h>
 #include <sensor_msgs/msg/magnetic_field.h>
 #include <maila_msgs/msg/tick_delta.h>
+#include <maila_msgs/msg/esp32_data.h>
 
 #ifdef ESP_PLATFORM
 #include "freertos/FreeRTOS.h"
@@ -40,14 +41,8 @@
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Aborting.\n",__LINE__,(int)temp_rc);vTaskDelete(NULL);}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Continuing.\n",__LINE__,(int)temp_rc);}}
 
-rcl_publisher_t imu_publisher;
-sensor_msgs__msg__Imu imu_msg;
-
-rcl_publisher_t mag_publisher;
-sensor_msgs__msg__MagneticField mag_msg;
-
-rcl_publisher_t tick_publisher;
-maila_msgs__msg__TickDelta tick_msg;
+rcl_publisher_t data_publisher;
+maila_msgs__msg__Esp32Data data_msg;
 
 #define ENCODERS 5
 int16_t prev_ticks[ENCODERS] = {};
@@ -62,7 +57,7 @@ uint64_t imu_readings = 0;
 const char imu_frame_id[] = "imu";
 const char tick_frame_id[] = "encoder";
 
-const unsigned int publisher_timer_timeout = 100; // ms
+const unsigned int publisher_timer_timeout = 10; // ms
 
 calibration_t cal = {
     .mag_offset = {.x = 25.183594, .y = 57.519531, .z = -62.648438},
@@ -190,35 +185,16 @@ void read_encoders()
 	delta_ticks[4] = imu_readings; // debug**********************
 }
 
-void prepare_imu_msg()
+void prepare_data_msg()
 {
-	imu_msg.header.frame_id.data = (char * ) malloc(FRAME_ID_STRING_LEN * sizeof(char));
-	imu_msg.header.frame_id.size = 0;
-	imu_msg.header.frame_id.capacity = FRAME_ID_STRING_LEN;
-	sprintf(imu_msg.header.frame_id.data, "imu");
-	imu_msg.header.frame_id.size = strlen(imu_msg.header.frame_id.data);
-}
+	data_msg.int_data.data = (int16_t *) malloc(ENCODERS * sizeof(int16_t));
+	data_msg.int_data.capacity = ENCODERS;
+	data_msg.int_data.size = ENCODERS;
 
-void prepare_mag_msg()
-{
-	mag_msg.header.frame_id.data = (char * ) malloc(FRAME_ID_STRING_LEN * sizeof(char));
-	mag_msg.header.frame_id.size = 0;
-	mag_msg.header.frame_id.capacity = FRAME_ID_STRING_LEN;
-	sprintf(mag_msg.header.frame_id.data, "imu");
-	mag_msg.header.frame_id.size = strlen(mag_msg.header.frame_id.data);
-}
 
-void prepare_tick_msg()
-{
-	tick_msg.header.frame_id.data = (char * ) malloc(FRAME_ID_STRING_LEN * sizeof(char));
-	tick_msg.header.frame_id.size = 0;
-	tick_msg.header.frame_id.capacity = FRAME_ID_STRING_LEN;
-	sprintf(tick_msg.header.frame_id.data, "tick");
-	tick_msg.header.frame_id.size = strlen(tick_msg.header.frame_id.data);
-
-	tick_msg.ticks.data = (int16_t *) malloc(ENCODERS * sizeof(int16_t));
-	tick_msg.ticks.capacity = ENCODERS;
-	tick_msg.ticks.size = ENCODERS;
+	data_msg.float_data.data = (float *) malloc(9 * sizeof(float));
+	data_msg.float_data.capacity = 9;
+	data_msg.float_data.size = 9;
 }
 
 void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
@@ -235,36 +211,28 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	// encoders
 	read_encoders();
 
-	// tick_msg
-	tick_msg.header.stamp.sec = act_sec;
-	tick_msg.header.stamp.nanosec = act_nanosec;
-	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
-	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
-	for (int i=0; i < ENCODERS; i++) {
-		tick_msg.ticks.data[i] = delta_ticks[i];
-	}
-	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
-
+	// imu
 	if (imu_readings <= 0) read_imu();
 
-	// imu_msg
-	imu_msg.header.stamp.sec = act_sec;
-	imu_msg.header.stamp.nanosec = act_nanosec;
-	imu_msg.angular_velocity.x = vg.x / imu_readings;
-	imu_msg.angular_velocity.y = vg.y / imu_readings;
-	imu_msg.angular_velocity.z = vg.z / imu_readings;
-	imu_msg.linear_acceleration.x = va.x / imu_readings;
-	imu_msg.linear_acceleration.y = va.y / imu_readings;
-	imu_msg.linear_acceleration.z = va.z / imu_readings;
-	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
+	// tick_msg
+	data_msg.stamp.sec = last_call_time / RCL_MS_TO_NS(1000);
+	data_msg.stamp.nanosec = last_call_time - (data_msg.stamp.sec*RCL_MS_TO_NS(1000));
+	for (int i=0; i < ENCODERS; i++) {
+		data_msg.int_data.data[i] = delta_ticks[i];
+	}
 
-	// mag_msg
-	mag_msg.header.stamp.sec = act_sec;
-	mag_msg.header.stamp.nanosec = act_nanosec;
-	mag_msg.magnetic_field.x = vm.x / imu_readings;
-	mag_msg.magnetic_field.y = vm.y / imu_readings;
-	mag_msg.magnetic_field.z = vm.z / imu_readings;
-	RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
+	data_msg.float_data.data[0] =  va.x / imu_readings;
+	data_msg.float_data.data[1] =  va.y / imu_readings;
+	data_msg.float_data.data[2] =  va.z / imu_readings;
+	data_msg.float_data.data[3] =  vg.x / imu_readings;
+	data_msg.float_data.data[4] =  vg.y / imu_readings;
+	data_msg.float_data.data[5] =  vg.z / imu_readings;
+	data_msg.float_data.data[6] =  vm.x / imu_readings;
+	data_msg.float_data.data[7] =  vm.y / imu_readings;
+	data_msg.float_data.data[8] =  vm.z / imu_readings;
+
+
+	RCSOFTCHECK(rcl_publish(&data_publisher, &data_msg, NULL));
 	
 	// reset
 	imu_readings = 0;
@@ -285,29 +253,13 @@ void appMain(void * arg)
 	rcl_node_t node;
 	RCCHECK(rclc_node_init_default(&node, "maila_freertos_esp32_61", "", &support));
 
-	// create imu publisher
+	// create publisher
 	RCCHECK(rclc_publisher_init_default(
-		&imu_publisher,
+		&data_publisher,
 		&node,
-		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-		"sensors/imu/data_raw"));
-	prepare_imu_msg();
-
-	// create mag publisher
-	RCCHECK(rclc_publisher_init_default(
-		&mag_publisher,
-		&node,
-		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, MagneticField),
-		"sensors/imu/mag"));
-	prepare_mag_msg();
-
-	// create tick publisher
-	RCCHECK(rclc_publisher_init_default(
-		&tick_publisher,
-		&node,
-		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, TickDelta),
-		"sensors/encoders/tick"));
-	prepare_tick_msg();	
+		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, Esp32Data),
+		"esp32_61"));
+	prepare_data_msg();
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer = rcl_get_zero_initialized_timer();
@@ -336,9 +288,7 @@ void appMain(void * arg)
 	}
 
 	// free resources
-	RCCHECK(rcl_publisher_fini(&imu_publisher, &node))
-	RCCHECK(rcl_publisher_fini(&mag_publisher, &node))
-	RCCHECK(rcl_publisher_fini(&tick_publisher, &node))
+	RCCHECK(rcl_publisher_fini(&data_publisher, &node))
 	RCCHECK(rcl_node_fini(&node))
 
   	vTaskDelete(NULL);
