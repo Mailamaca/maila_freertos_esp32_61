@@ -55,7 +55,7 @@ int16_t delta_ticks[ENCODERS] = {};
 int16_t ticks;
 
 //vector_t va, vg, vm;
-//uint64_t imu_readings = 0;
+uint64_t imu_readings = 0;
 
 /*calibration_t cal = {
     .mag_offset = {.x = 25.183594, .y = 57.519531, .z = -62.648438},
