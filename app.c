@@ -244,12 +244,12 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
 
 	// mag_msg
-	/*mag_msg.header.stamp.sec = act_sec;
+	mag_msg.header.stamp.sec = act_sec;
 	mag_msg.header.stamp.nanosec = act_nanosec;
 	mag_msg.magnetic_field.x = vm.x / imu_readings;
 	mag_msg.magnetic_field.y = vm.y / imu_readings;
 	mag_msg.magnetic_field.z = vm.z / imu_readings;
-	RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));*/
+	RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
 	
 	// reset
 	imu_readings = 0;
@@ -279,12 +279,12 @@ void appMain(void * arg)
 	prepare_imu_msg();
 
 	// create mag publisher
-	/*RCCHECK(rclc_publisher_init_default(
+	RCCHECK(rclc_publisher_init_default(
 		&mag_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, MagneticField),
 		"sensors/imu/mag"));
-	prepare_mag_msg();*/
+	prepare_mag_msg();
 
 	// create tick publisher
 	RCCHECK(rclc_publisher_init_default(
