@@ -21,7 +21,7 @@
 
 rcl_publisher_t publisher;
 //std_msgs__msg__Int32 msg;
-maila_msgs__msg__TickDelta msg;
+//maila_msgs__msg__TickDelta msg;
 sensor_msgs__msg__Imu msg;
 
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
