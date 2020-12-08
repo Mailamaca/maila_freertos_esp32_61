@@ -28,6 +28,8 @@ rcl_publisher_t publisher;
 //maila_msgs__msg__Esp32Data msg;
 std_msgs__msg__Header msg;
 
+#define FRAME_ID_STRING_LEN 20
+
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 {
 	RCLC_UNUSED(last_call_time);
@@ -75,9 +77,9 @@ void appMain(void * arg)
 	msg.stamp.sec++;
 
 	// Fill the array with a known sequence
-	msg.frame_id.data = (char * ) malloc(ARRAY_LEN * sizeof(char));
+	msg.frame_id.data = (char * ) malloc(FRAME_ID_STRING_LEN * sizeof(char));
 	msg.frame_id.size = 0;
-	msg.frame_id.capacity = ARRAY_LEN;
+	msg.frame_id.capacity = FRAME_ID_STRING_LEN;
 	sprintf(msg.frame_id.data, "pippo");
 	msg.frame_id.size = strlen(msg.frame_id.data);
 
