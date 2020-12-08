@@ -177,36 +177,30 @@ void read_encoders()
 
 void prepare_imu_msg()
 {
-	imu_msg.header.frame_id.data = (char * ) malloc(FRAME_ID_STRING_LEN * sizeof(char));
-	imu_msg.header.frame_id.size = 0;
-	imu_msg.header.frame_id.capacity = FRAME_ID_STRING_LEN;
-	sprintf(imu_msg.header.frame_id.data, "imu");
-	imu_msg.header.frame_id.size = strlen(imu_msg.header.frame_id.data);
+	imu_msg.header.frame_id.data = imu_frame_id;
+	imu_msg.header.frame_id.capacity = sizeof(imu_frame_id);
+	imu_msg.header.frame_id.size = sizeof(imu_frame_id);
 }
 
 void prepare_mag_msg()
 {
-	mag_msg.header.frame_id.data = (char * ) malloc(FRAME_ID_STRING_LEN * sizeof(char));
-	mag_msg.header.frame_id.size = 0;
-	mag_msg.header.frame_id.capacity = FRAME_ID_STRING_LEN;
-	sprintf(mag_msg.header.frame_id.data, "imu");
-	mag_msg.header.frame_id.size = strlen(mag_msg.header.frame_id.data);
+	mag_msg.header.frame_id.data = imu_frame_id;
+	mag_msg.header.frame_id.capacity = sizeof(imu_frame_id);
+	mag_msg.header.frame_id.size = sizeof(imu_frame_id);
 }
 
 void prepare_tick_msg()
 {
-	tick_msg.header.frame_id.data = (char * ) malloc(FRAME_ID_STRING_LEN * sizeof(char));
-	tick_msg.header.frame_id.size = 0;
-	tick_msg.header.frame_id.capacity = FRAME_ID_STRING_LEN;
-	sprintf(tick_msg.header.frame_id.data, "tick");
-	tick_msg.header.frame_id.size = strlen(tick_msg.header.frame_id.data);
+	tick_msg.header.frame_id.data = tick_frame_id;
+	tick_msg.header.frame_id.capacity = sizeof(tick_frame_id);
+	tick_msg.header.frame_id.size = sizeof(tick_frame_id);
 
 	tick_msg.ticks.data = (int16_t *) malloc(ENCODERS * sizeof(int16_t));
 	tick_msg.ticks.capacity = ENCODERS;
 	tick_msg.ticks.size = ENCODERS;
 }
 
-void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
+void imu_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 {
 	int64_t act_time = 10; //esp_timer_get_time(); // us since start
 	int64_t act_sec = act_time / 1000000;
@@ -215,20 +209,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	//RCLC_UNUSED(last_call_time);
 	if (timer == NULL) {
 		return;
-	}
-	
-	// encoders
-	read_encoders();
-
-	// tick_msg
-	tick_msg.header.stamp.sec = act_sec;
-	tick_msg.header.stamp.nanosec = act_nanosec;
-	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
-	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
-	for (int i=0; i < ENCODERS; i++) {
-		tick_msg.ticks.data[i] = i; //delta_ticks[i];
-	}
-	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
+	}	
 
 	if (imu_readings <= 0) read_imu();
 
@@ -258,6 +239,31 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	vm.x = vm.y = vm.z = 0;
 }
 
+void tick_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
+{
+	int64_t act_time = 10; //esp_timer_get_time(); // us since start
+	int64_t act_sec = act_time / 1000000;
+	int64_t act_nanosec = (act_time - (act_sec*1000000)) * 1000;
+
+	//RCLC_UNUSED(last_call_time);
+	if (timer == NULL) {
+		return;
+	}
+	
+	// encoders
+	read_encoders();
+
+	// tick_msg
+	tick_msg.header.stamp.sec = act_sec;
+	tick_msg.header.stamp.nanosec = act_nanosec;
+	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
+	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
+	for (int i=0; i < ENCODERS; i++) {
+		tick_msg.ticks.data[i] = i; //delta_ticks[i];
+	}
+	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
+}
+
 void appMain(void * arg)
 {
 	rcl_allocator_t allocator = rcl_get_default_allocator();
@@ -267,13 +273,13 @@ void appMain(void * arg)
 	RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
 
 	// create node
-	rcl_node_t node;
-	RCCHECK(rclc_node_init_default(&node, "maila_freertos_esp32_61", "", &support));
+	rcl_node_t imu_node;
+	RCCHECK(rclc_node_init_default(&imu_node, "maila_freertos_esp32_61_imu", "", &support));
 
 	// create imu publisher
 	RCCHECK(rclc_publisher_init_default(
 		&imu_publisher,
-		&node,
+		&imu_node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
 		"sensors/imu/data_raw"));
 	prepare_imu_msg();
@@ -281,51 +287,74 @@ void appMain(void * arg)
 	// create mag publisher
 	RCCHECK(rclc_publisher_init_default(
 		&mag_publisher,
-		&node,
+		&imu_node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, MagneticField),
 		"sensors/imu/mag"));
-	prepare_mag_msg();
-
-	// create tick publisher
-	RCCHECK(rclc_publisher_init_default(
-		&tick_publisher,
-		&node,
-		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, TickDelta),
-		"sensors/encoders/tick"));
-	prepare_tick_msg();	
+	prepare_mag_msg();	
 
 	// create publisher_timer
-	rcl_timer_t publisher_timer = rcl_get_zero_initialized_timer();
-	const unsigned int publisher_timer_timeout = 1000;
+	rcl_timer_t imu_publisher_timer = rcl_get_zero_initialized_timer();
+	const unsigned int imu_publisher_timer_timeout = 1000;
 	RCCHECK(rclc_timer_init_default(
-		&publisher_timer,
+		&imu_publisher_timer,
 		&support,
-		RCL_MS_TO_NS(publisher_timer_timeout),
-		publisher_timer_callback));	
-
-	// config pcnt
-	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
+		RCL_MS_TO_NS(imu_publisher_timer_timeout),
+		imu_publisher_timer_callback));	
 
 	// config imu mpu9250
 	i2c_mpu9250_init(&cal);
 	//MadgwickAHRSinit(500, 0.8); // calc orientation on the raspberry
 	
 	// create executor
-	rclc_executor_t executor;
-	unsigned int num_handles = 1 + 0; //n_timers + n_subscriptions;
-	RCCHECK(rclc_executor_init(&executor, &support.context, num_handles, &allocator));
-	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
+	rclc_executor_t imu_executor;
+	unsigned int imu_num_handles = 1 + 0; //n_timers + n_subscriptions;
+	RCCHECK(rclc_executor_init(&imu_executor, &support.context, imu_num_handles, &allocator));
+	RCCHECK(rclc_executor_add_timer(&imu_executor, &imu_publisher_timer));
 	
+
+
+	// create node
+	rcl_node_t tick_node;
+	RCCHECK(rclc_node_init_default(&tick_node, "maila_freertos_esp32_61_tick", "", &support));
+
+	// create tick publisher
+	RCCHECK(rclc_publisher_init_default(
+		&tick_publisher,
+		&tick_node,
+		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, TickDelta),
+		"sensors/encoders/tick"));
+	prepare_tick_msg();
+
+	// create publisher_timer
+	rcl_timer_t tick_publisher_timer = rcl_get_zero_initialized_timer();
+	const unsigned int tick_publisher_timer_timeout = 1500;
+	RCCHECK(rclc_timer_init_default(
+		&tick_publisher_timer,
+		&support,
+		RCL_MS_TO_NS(tick_publisher_timer_timeout),
+		tick_publisher_timer_callback));	
+
+	// config pcnt
+	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
+
+	// create executor
+	rclc_executor_t tick_executor;
+	unsigned int tick_num_handles = 1 + 0; //n_timers + n_subscriptions;
+	RCCHECK(rclc_executor_init(&tick_executor, &support.context, tick_num_handles, &allocator));
+	RCCHECK(rclc_executor_add_timer(&tick_executor, &tick_publisher_timer));
+
 	while(true) {
 		read_imu();
-		rclc_executor_spin_some(&executor, 1000); // nanosec
+		rclc_executor_spin_some(&imu_executor, 1000); // nanosec
+		rclc_executor_spin_some(&tick_executor, 1000); // nanosec
 	}
 
 	// free resources
-	RCCHECK(rcl_publisher_fini(&imu_publisher, &node))
-	RCCHECK(rcl_publisher_fini(&mag_publisher, &node))
-	RCCHECK(rcl_publisher_fini(&tick_publisher, &node))
-	RCCHECK(rcl_node_fini(&node))
+	RCCHECK(rcl_publisher_fini(&imu_publisher, &imu_node))
+	RCCHECK(rcl_publisher_fini(&mag_publisher, &imu_node))
+	RCCHECK(rcl_publisher_fini(&tick_publisher, &tick_node))
+	RCCHECK(rcl_node_fini(&imu_node))
+	RCCHECK(rcl_node_fini(&tick_node))
 
   	vTaskDelete(NULL);
 }
