@@ -257,7 +257,7 @@ void appMain(void * arg)
 		&imu_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-		"sensors/imu/data_raw"));
+		"maila_freertos_esp32_61"));
 
 	// create publisher_timer
 	rcl_timer_t publisher_timer = rcl_get_zero_initialized_timer();
@@ -269,7 +269,7 @@ void appMain(void * arg)
 		publisher_timer_callback));
 
 	// config pcnt
-	setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
+	//setPCNTParams(GPIO_NUM_32,GPIO_NUM_33, PCNT_CHANNEL_0, PCNT_UNIT_0, 1); // encoder 0
 
 	// config imu mpu9250
 	//i2c_mpu9250_init(&cal);
@@ -277,7 +277,6 @@ void appMain(void * arg)
 	
 	// create executor
 	rclc_executor_t executor;
-	executor = rclc_executor_get_zero_initialized_executor();
 	unsigned int num_handles = 1 + 0; //n_timers + n_subscriptions;
 	RCCHECK(rclc_executor_init(&executor, &support.context, num_handles, &allocator));
 	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
