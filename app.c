@@ -62,7 +62,7 @@ uint64_t imu_readings = 0;
 const char imu_frame_id[] = "imu";
 const char tick_frame_id[] = "encoder";
 
-const unsigned int publisher_timer_timeout = 10; // ms
+const unsigned int publisher_timer_timeout = 100; // ms
 
 calibration_t cal = {
     .mag_offset = {.x = 25.183594, .y = 57.519531, .z = -62.648438},
