@@ -133,63 +133,6 @@ int16_t getPCNTDelta(int16_t prev_value, int16_t new_value) {
 	}
 }
 
-void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
-{
-	int64_t act_time = esp_timer_get_time(); // us since start
-	int64_t act_sec = act_time / 1000000;
-	int64_t act_nanosec = (act_time - (act_sec*1000000)) * 1000;
-
-	//RCLC_UNUSED(last_call_time);
-	if (timer == NULL) {
-		return;
-	}
-	
-	// encoders
-	read_encoders();
-
-	// tick_msg
-	tick_msg.header.seq = seq;
-	tick_msg.header.stamp.sec = act_sec;
-	tick_msg.header.stamp.nanosec = act_nanosec;
-	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
-	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
-	for (int i=0; i < ENCODERS; i++) {
-		tick_msg.ticks.data[i] = delta_ticks[i];
-	}
-	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
-
-	// imu_msg
-	if (imu_readings <= 0) read_imu();
-	imu_msg.header.seq = seq;
-	imu_msg.header.stamp.sec = act_sec;
-	imu_msg.header.stamp.nanosec = act_nanosec;
-	imu_msg.angular_velocity.x = vg.x / imu_readings;
-	imu_msg.angular_velocity.y = vg.y / imu_readings;
-	imu_msg.angular_velocity.z = vg.z / imu_readings;
-	imu_msg.linear_acceleration.x = va.x / imu_readings;
-	imu_msg.linear_acceleration.y = va.y / imu_readings;
-	imu_msg.linear_acceleration.z = va.z / imu_readings;
-	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
-
-	// mag_msg
-	if (imu_readings <= 0) read_imu();
-	imu_msg.header.seq = seq;
-	imu_msg.header.stamp.sec = act_sec;
-	imu_msg.header.stamp.nanosec = act_nanosec;
-	mag_msg.magnetic_field.x = vm.x / imu_readings;
-	mag_msg.magnetic_field.y = vm.y / imu_readings;
-	mag_msg.magnetic_field.z = vm.z / imu_readings;
-	RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
-	
-	// reset
-	seq++;
-	imu_readings = 0;
-	va.x = va.y = va.z = 0;
-	vg.x = vg.y = vg.z = 0;
-	vm.x = vm.y = vm.z = 0;
-
-}
-
 void read_imu()
 {
 
@@ -260,6 +203,57 @@ void prepare_tick_msg()
 	tick_msg.ticks.size = ENCODERS;
 }
 
+void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
+{
+	int64_t act_time = esp_timer_get_time(); // us since start
+	int64_t act_sec = act_time / 1000000;
+	int64_t act_nanosec = (act_time - (act_sec*1000000)) * 1000;
+
+	//RCLC_UNUSED(last_call_time);
+	if (timer == NULL) {
+		return;
+	}
+	
+	// encoders
+	read_encoders();
+
+	// tick_msg
+	tick_msg.header.stamp.sec = act_sec;
+	tick_msg.header.stamp.nanosec = act_nanosec;
+	tick_msg.delta.sec = last_call_time / RCL_MS_TO_NS(1000);
+	tick_msg.delta.nanosec = last_call_time - (tick_msg.delta.sec*RCL_MS_TO_NS(1000));
+	for (int i=0; i < ENCODERS; i++) {
+		tick_msg.ticks.data[i] = delta_ticks[i];
+	}
+	RCSOFTCHECK(rcl_publish(&tick_publisher, &tick_msg, NULL));
+
+	// imu_msg
+	if (imu_readings <= 0) read_imu();
+	imu_msg.header.stamp.sec = act_sec;
+	imu_msg.header.stamp.nanosec = act_nanosec;
+	imu_msg.angular_velocity.x = vg.x / imu_readings;
+	imu_msg.angular_velocity.y = vg.y / imu_readings;
+	imu_msg.angular_velocity.z = vg.z / imu_readings;
+	imu_msg.linear_acceleration.x = va.x / imu_readings;
+	imu_msg.linear_acceleration.y = va.y / imu_readings;
+	imu_msg.linear_acceleration.z = va.z / imu_readings;
+	RCSOFTCHECK(rcl_publish(&imu_publisher, &imu_msg, NULL));
+
+	// mag_msg
+	if (imu_readings <= 0) read_imu();
+	imu_msg.header.stamp.sec = act_sec;
+	imu_msg.header.stamp.nanosec = act_nanosec;
+	mag_msg.magnetic_field.x = vm.x / imu_readings;
+	mag_msg.magnetic_field.y = vm.y / imu_readings;
+	mag_msg.magnetic_field.z = vm.z / imu_readings;
+	RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
+	
+	// reset
+	imu_readings = 0;
+	va.x = va.y = va.z = 0;
+	vg.x = vg.y = vg.z = 0;
+	vm.x = vm.y = vm.z = 0;
+}
 
 void appMain(void * arg)
 {
@@ -326,7 +320,9 @@ void appMain(void * arg)
 	}
 
 	// free resources
-	RCCHECK(rcl_publisher_fini(&publisher, &node))
+	RCCHECK(rcl_publisher_fini(&imu_publisher, &node))
+	RCCHECK(rcl_publisher_fini(&mag_publisher, &node))
+	RCCHECK(rcl_publisher_fini(&tick_publisher, &node))
 	RCCHECK(rcl_node_fini(&node))
 
   	vTaskDelete(NULL);
