@@ -177,7 +177,7 @@ void prepare_imu_msg()
 	imu_msg.header.frame_id.data = (char * ) malloc(FRAME_ID_STRING_LEN * sizeof(char));
 	imu_msg.header.frame_id.size = 0;
 	imu_msg.header.frame_id.capacity = FRAME_ID_STRING_LEN;
-	sprintf(imu_msg.header.frame_id.data, imu_frame_id);
+	sprintf(imu_msg.header.frame_id.data, "imu");
 	imu_msg.header.frame_id.size = strlen(imu_msg.header.frame_id.data);
 }
 
@@ -186,7 +186,7 @@ void prepare_mag_msg()
 	mag_msg.header.frame_id.data = (char * ) malloc(FRAME_ID_STRING_LEN * sizeof(char));
 	mag_msg.header.frame_id.size = 0;
 	mag_msg.header.frame_id.capacity = FRAME_ID_STRING_LEN;
-	sprintf(mag_msg.header.frame_id.data, imu_frame_id);
+	sprintf(mag_msg.header.frame_id.data, "imu");
 	mag_msg.header.frame_id.size = strlen(mag_msg.header.frame_id.data);
 }
 
@@ -195,7 +195,7 @@ void prepare_tick_msg()
 	tick_msg.header.frame_id.data = (char * ) malloc(FRAME_ID_STRING_LEN * sizeof(char));
 	tick_msg.header.frame_id.size = 0;
 	tick_msg.header.frame_id.capacity = FRAME_ID_STRING_LEN;
-	sprintf(tick_msg.header.frame_id.data, tick_frame_id);
+	sprintf(tick_msg.header.frame_id.data, "tick");
 	tick_msg.header.frame_id.size = strlen(tick_msg.header.frame_id.data);
 
 	tick_msg.ticks.data = (int16_t *)calloc(ENCODERS, sizeof(int16_t));
@@ -205,7 +205,7 @@ void prepare_tick_msg()
 
 void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 {
-	int64_t act_time = esp_timer_get_time(); // us since start
+	int64_t act_time = 10; //esp_timer_get_time(); // us since start
 	int64_t act_sec = act_time / 1000000;
 	int64_t act_nanosec = (act_time - (act_sec*1000000)) * 1000;
 
@@ -276,19 +276,19 @@ void appMain(void * arg)
 	prepare_imu_msg();
 
 	// create mag publisher
-	RCCHECK(rclc_publisher_init_default(
+	/*RCCHECK(rclc_publisher_init_default(
 		&mag_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, MagneticField),
-		"sensors/imu/mag"));
+		"sensors/imu/mag"));*/
 	prepare_mag_msg();
 
 	// create tick publisher
-	RCCHECK(rclc_publisher_init_default(
+	/*RCCHECK(rclc_publisher_init_default(
 		&tick_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(maila_msgs, msg, TickDelta),
-		"sensors/encoders/tick"));
+		"sensors/encoders/tick"));*/
 	prepare_tick_msg();	
 
 	// create publisher_timer
