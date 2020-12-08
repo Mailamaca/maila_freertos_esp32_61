@@ -5,6 +5,8 @@
 #include <rcl/error_handling.h>
 #include <std_msgs/msg/int32.h>
 
+#include <maila_msgs/msg/tick_delta.msg>
+
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 
@@ -17,14 +19,16 @@
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Continuing.\n",__LINE__,(int)temp_rc);}}
 
 rcl_publisher_t publisher;
-std_msgs__msg__Int32 msg;
+//std_msgs__msg__Int32 msg;
+maila_msgs__msg__TickDelta msg;
 
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 {
 	RCLC_UNUSED(last_call_time);
 	if (timer != NULL) {
 		RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
-		msg.data++;
+		//msg.data++;
+		msg.delta.sec++;
 	}
 }
 
@@ -61,7 +65,8 @@ void appMain(void * arg)
 	RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
 	RCCHECK(rclc_executor_add_timer(&executor, &timer));
 
-	msg.data = 0;
+	//msg.data = 0;
+	msg.delta.sec++;
 
 	while(1){
 		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
