@@ -249,7 +249,7 @@ void publisher_timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 	mag_msg.magnetic_field.x = vm.x / imu_readings;
 	mag_msg.magnetic_field.y = vm.y / imu_readings;
 	mag_msg.magnetic_field.z = vm.z / imu_readings;
-	RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
+	//RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
 	
 	// reset
 	imu_readings = 0;
