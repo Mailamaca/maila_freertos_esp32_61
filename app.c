@@ -312,7 +312,7 @@ void appMain(void * arg)
 	
 	// create executor
 	rclc_executor_t executor;
-	unsigned int num_handles = 1 + 0; //n_timers + n_subscriptions;
+	unsigned int num_handles = 3 + 0; //n_timers + n_subscriptions;
 	RCCHECK(rclc_executor_init(&executor, &support.context, num_handles, &allocator));
 	RCCHECK(rclc_executor_add_timer(&executor, &publisher_timer));
 	
