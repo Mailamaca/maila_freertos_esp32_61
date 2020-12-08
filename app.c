@@ -5,7 +5,7 @@
 #include <rcl/error_handling.h>
 #include <std_msgs/msg/int32.h>
 
-#include <maila_msgs/msg/tick_delta.msg>
+#include <maila_msgs/msg/tick_delta.h>
 
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
